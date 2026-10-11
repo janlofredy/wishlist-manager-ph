@@ -3,7 +3,6 @@ use std::str::FromStr;
 use std::path::Path;
 use tracing::info;
 
-pub mod schema;
 pub mod migrations;
 
 pub type DbPool = SqlitePool;
