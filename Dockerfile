@@ -52,7 +52,7 @@ ENV FRONTEND_DIR=/app/frontend_build
 RUN mkdir -p /app/data /app/frontend_build
 
 # Copy compiled backend binary
-COPY --from=backend-builder /app/backend/target/release/wishlist-manager-ph-backend /app/wishlist-manager-ph
+COPY --from=backend-builder /app/target/release/wishlist-manager-ph-backend /app/wishlist-manager-ph
 
 # Copy compiled static frontend SPA assets
 COPY --from=frontend-builder /app/frontend/build /app/frontend_build
