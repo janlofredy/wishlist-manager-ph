@@ -1,0 +1,61 @@
+{
+  "name": "wishlist-manager-ph",
+  "title": {
+    "en_US": "Wishlist Manager PH"
+  },
+  "tagline": {
+    "en_US": "Anti-Impulse Buying & Shopee Philippines Price Tracker"
+  },
+  "description": {
+    "en_US": "A personal wishlist, monthly budget planning, and Shopee Philippines price tracking system built for Philippine salary earners (PHP 18,000/mo baseline). Organizes wants vs. needs, calculates opportunity costs, buy delay impacts, and tracks sale festivals (Payday, 10.10, 11.11, 12.12)."
+  },
+  "tip": {
+    "before_install": {
+      "en_US": "Data will be stored in your chosen storage volume under /app/data."
+    }
+  },
+  "icon": "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/shopee.png",
+  "thumbnail": "",
+  "screenshot_link": [],
+  "category": "Utilities",
+  "port_map": "3000",
+  "scheme": "http",
+  "index": "/",
+  "author": "Antigravity Team",
+  "developer": "Wishlist Manager PH Community",
+  "main": "wishlist-manager",
+  "architectures": [
+    "amd64",
+    "arm64",
+    "arm"
+  ],
+  "compose": {
+    "services": {
+      "wishlist-manager": {
+        "image": "wishlist-manager-ph:latest",
+        "container_name": "wishlist-manager-ph",
+        "restart": "unless-stopped",
+        "ports": [
+          {
+            "target": 3000,
+            "published": "3000",
+            "protocol": "tcp"
+          }
+        ],
+        "volumes": [
+          {
+            "type": "bind",
+            "source": "/DATA/AppData/wishlist-manager/data",
+            "target": "/app/data"
+          }
+        ],
+        "environment": {
+          "PORT": "3000",
+          "DATA_DIR": "/app/data",
+          "DATABASE_URL": "sqlite:/app/data/wishlist.db?mode=rwc",
+          "JWT_SECRET": "wishlist-manager-ph-casaos-secure-secret-2026"
+        }
+      }
+    }
+  }
+}

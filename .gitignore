@@ -1,0 +1,19 @@
+# Rust / Cargo
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+.env
+.env.local
+.DS_Store
+
+# Persistent application data
+data/*.db
+data/*.db-wal
+data/*.db-shm
+pgdata/

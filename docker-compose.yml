@@ -1,0 +1,40 @@
+services:
+  wishlist-manager:
+    image: wishlist-manager-ph:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wishlist-manager-ph
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATA_DIR=/app/data
+      - DATABASE_URL=sqlite:/app/data/wishlist.db?mode=rwc
+      - JWT_SECRET=change-this-to-a-very-secure-random-secret-in-production
+      - TELEGRAM_BOT_TOKEN=
+      - TELEGRAM_CHAT_ID=
+      - DISCORD_WEBHOOK_URL=
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/system/sale-calendar"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+# Optional PostgreSQL setup:
+# Uncomment below if you prefer PostgreSQL over SQLite
+#
+#   postgres:
+#     image: postgres:16-alpine
+#     container_name: wishlist-db
+#     restart: unless-stopped
+#     environment:
+#       POSTGRES_USER: wishlist
+#       POSTGRES_PASSWORD: wishlist_secure_password
+#       POSTGRES_DB: wishlist_ph
+#     volumes:
+#       - ./pgdata:/var/lib/postgresql/data
