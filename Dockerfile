@@ -21,13 +21,22 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
-# Copy workspace & backend crates
+# Copy workspace & crate definitions for dependency layer caching
 COPY Cargo.toml ./
+COPY backend/Cargo.toml ./backend/
+
+# Create a dummy main to cache compiled external dependencies
+RUN mkdir -p backend/src && echo "fn main() {}" > backend/src/main.rs
+WORKDIR /app/backend
+RUN cargo build --release || true
+RUN rm -rf src
+
+# Now copy full backend source code
+WORKDIR /app
 COPY backend ./backend
 
 WORKDIR /app/backend
-
-# Pre-compile release binary
+# Pre-compile release binary with dependencies already cached
 RUN cargo build --release
 
 # ==========================================
