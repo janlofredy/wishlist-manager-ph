@@ -5,7 +5,7 @@ use serde::Serialize;
 #[derive(Debug, Serialize)]
 pub struct AdvisorRecommendation {
     pub item: WishlistItem,
-    pub recommendation: String, // "Buy Now", "Wait For Sale", "Save Up", "Avoid For Now"
+    pub recommendation: String,
     pub score: f64,
     pub rationale: String,
 }
@@ -37,7 +37,7 @@ pub struct DecisionAssistantResult {
     pub item_id: String,
     pub item_name: String,
     pub price: f64,
-    pub verdict: String, // "Buy Now", "Wait For Sale", "Save More", "Not Recommended"
+    pub verdict: String,
     pub explanation: String,
     pub delay_impacts: Vec<ItemDelayImpact>,
     pub savings_impact_pct: f64,
@@ -48,8 +48,7 @@ pub async fn evaluate_what_should_i_buy(
     user_id: &str,
     available_budget: f64,
 ) -> Result<Vec<AdvisorRecommendation>, sqlx::Error> {
-    let items = sqlx::query_as!(
-        WishlistItem,
+    let items = sqlx::query_as::<_, WishlistItem>(
         r#"
         SELECT id, wishlist_id, user_id, name, category, classification, priority,
                estimated_price, current_price, target_price, quantity, status, notes,
@@ -59,9 +58,9 @@ pub async fn evaluate_what_should_i_buy(
         FROM items
         WHERE user_id = ? AND status IN ('Waiting', 'Watching Sale', 'Ready To Buy')
         ORDER BY priority ASC, estimated_price ASC
-        "#,
-        user_id
+        "#
     )
+    .bind(user_id)
     .fetch_all(pool)
     .await?;
 
@@ -135,8 +134,7 @@ pub async fn evaluate_should_i_buy_this(
     monthly_wishlist_budget: f64,
     current_wishlist_fund: f64,
 ) -> Result<DecisionAssistantResult, sqlx::Error> {
-    let item = sqlx::query_as!(
-        WishlistItem,
+    let item = sqlx::query_as::<_, WishlistItem>(
         r#"
         SELECT id, wishlist_id, user_id, name, category, classification, priority,
                estimated_price, current_price, target_price, quantity, status, notes,
@@ -145,10 +143,10 @@ pub async fn evaluate_should_i_buy_this(
                created_date, last_updated, purchased_date
         FROM items
         WHERE id = ? AND user_id = ?
-        "#,
-        item_id,
-        user_id
+        "#
     )
+    .bind(item_id)
+    .bind(user_id)
     .fetch_one(pool)
     .await?;
 
@@ -156,8 +154,7 @@ pub async fn evaluate_should_i_buy_this(
     let is_need = item.classification.eq_ignore_ascii_case("Need");
 
     // Fetch other active items to calculate delay impacts
-    let other_items = sqlx::query_as!(
-        WishlistItem,
+    let other_items = sqlx::query_as::<_, WishlistItem>(
         r#"
         SELECT id, wishlist_id, user_id, name, category, classification, priority,
                estimated_price, current_price, target_price, quantity, status, notes,
@@ -168,10 +165,10 @@ pub async fn evaluate_should_i_buy_this(
         WHERE user_id = ? AND id != ? AND status IN ('Waiting', 'Watching Sale')
         ORDER BY priority ASC, estimated_price ASC
         LIMIT 5
-        "#,
-        user_id,
-        item_id
+        "#
     )
+    .bind(user_id)
+    .bind(item_id)
     .fetch_all(pool)
     .await?;
 

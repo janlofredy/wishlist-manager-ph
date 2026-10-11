@@ -42,11 +42,10 @@ async fn me(
     State(state): State<Arc<AppState>>,
     AuthUser(claims): AuthUser,
 ) -> Result<Json<User>, (StatusCode, String)> {
-    let user = sqlx::query_as!(
-        User,
-        "SELECT id, username, email, password_hash, role, created_at FROM users WHERE id = ?",
-        claims.sub
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, role, created_at FROM users WHERE id = ?"
     )
+    .bind(&claims.sub)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?

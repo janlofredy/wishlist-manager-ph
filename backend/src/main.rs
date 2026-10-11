@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             interval.tick().await;
             info!("Running 24-hour scheduled Shopee price sync...");
-            let items: Result<Vec<String>, _> = sqlx::query_scalar!(
+            let items: Result<Vec<String>, _> = sqlx::query_scalar(
                 "SELECT id FROM items WHERE shopee_url IS NOT NULL AND status IN ('Waiting', 'Watching Sale')"
             )
             .fetch_all(&bg_pool)

@@ -3,12 +3,11 @@ use crate::models::budget::{Budget, BudgetSummary, UpdateBudgetRequest};
 use chrono::Datelike;
 
 pub async fn get_or_create_monthly_budget(pool: &SqlitePool, user_id: &str, month_str: &str) -> Result<Budget, sqlx::Error> {
-    let existing = sqlx::query_as!(
-        Budget,
-        "SELECT id, user_id, month, monthly_salary, monthly_bills, emergency_fund_target, savings_allocation_percent, monthly_wishlist_budget, carryover_amount, spent_amount, created_at FROM budgets WHERE user_id = ? AND month = ?",
-        user_id,
-        month_str
+    let existing = sqlx::query_as::<_, Budget>(
+        "SELECT id, user_id, month, monthly_salary, monthly_bills, emergency_fund_target, savings_allocation_percent, monthly_wishlist_budget, carryover_amount, spent_amount, created_at FROM budgets WHERE user_id = ? AND month = ?"
     )
+    .bind(user_id)
+    .bind(month_str)
     .fetch_optional(pool)
     .await?;
 
@@ -18,12 +17,11 @@ pub async fn get_or_create_monthly_budget(pool: &SqlitePool, user_id: &str, mont
 
     // Calculate carryover from previous month
     let prev_month = calculate_prev_month(month_str);
-    let prev_budget = sqlx::query_as!(
-        Budget,
-        "SELECT id, user_id, month, monthly_salary, monthly_bills, emergency_fund_target, savings_allocation_percent, monthly_wishlist_budget, carryover_amount, spent_amount, created_at FROM budgets WHERE user_id = ? AND month = ?",
-        user_id,
-        prev_month
+    let prev_budget = sqlx::query_as::<_, Budget>(
+        "SELECT id, user_id, month, monthly_salary, monthly_bills, emergency_fund_target, savings_allocation_percent, monthly_wishlist_budget, carryover_amount, spent_amount, created_at FROM budgets WHERE user_id = ? AND month = ?"
     )
+    .bind(user_id)
+    .bind(&prev_month)
     .fetch_optional(pool)
     .await?;
 
@@ -42,31 +40,30 @@ pub async fn get_or_create_monthly_budget(pool: &SqlitePool, user_id: &str, mont
     let default_savings_pct = 20.0;
     let default_wishlist_alloc = 3000.0;
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO budgets (
             id, user_id, month, monthly_salary, monthly_bills, emergency_fund_target,
             savings_allocation_percent, monthly_wishlist_budget, carryover_amount, spent_amount
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0)
-        "#,
-        new_id,
-        user_id,
-        month_str,
-        default_salary,
-        default_bills,
-        default_ef,
-        default_savings_pct,
-        default_wishlist_alloc,
-        carryover
+        "#
     )
+    .bind(&new_id)
+    .bind(user_id)
+    .bind(month_str)
+    .bind(default_salary)
+    .bind(default_bills)
+    .bind(default_ef)
+    .bind(default_savings_pct)
+    .bind(default_wishlist_alloc)
+    .bind(carryover)
     .execute(pool)
     .await?;
 
-    let created = sqlx::query_as!(
-        Budget,
-        "SELECT id, user_id, month, monthly_salary, monthly_bills, emergency_fund_target, savings_allocation_percent, monthly_wishlist_budget, carryover_amount, spent_amount, created_at FROM budgets WHERE id = ?",
-        new_id
+    let created = sqlx::query_as::<_, Budget>(
+        "SELECT id, user_id, month, monthly_salary, monthly_bills, emergency_fund_target, savings_allocation_percent, monthly_wishlist_budget, carryover_amount, spent_amount, created_at FROM budgets WHERE id = ?"
     )
+    .bind(&new_id)
     .fetch_one(pool)
     .await?;
 
@@ -103,7 +100,7 @@ pub async fn update_budget(pool: &SqlitePool, user_id: &str, req: UpdateBudgetRe
     let savings_pct = req.savings_allocation_percent.unwrap_or(current.savings_allocation_percent);
     let wishlist_alloc = req.monthly_wishlist_budget.unwrap_or(current.monthly_wishlist_budget);
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         UPDATE budgets SET
             monthly_salary = ?,
@@ -112,14 +109,14 @@ pub async fn update_budget(pool: &SqlitePool, user_id: &str, req: UpdateBudgetRe
             savings_allocation_percent = ?,
             monthly_wishlist_budget = ?
         WHERE id = ?
-        "#,
-        salary,
-        bills,
-        ef,
-        savings_pct,
-        wishlist_alloc,
-        current.id
+        "#
     )
+    .bind(salary)
+    .bind(bills)
+    .bind(ef)
+    .bind(savings_pct)
+    .bind(wishlist_alloc)
+    .bind(&current.id)
     .execute(pool)
     .await?;
 

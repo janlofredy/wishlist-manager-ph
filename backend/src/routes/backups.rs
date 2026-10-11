@@ -24,8 +24,7 @@ async fn export_csv(
     State(state): State<Arc<AppState>>,
     AuthUser(claims): AuthUser,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let items = sqlx::query_as!(
-        WishlistItem,
+    let items = sqlx::query_as::<_, WishlistItem>(
         r#"
         SELECT id, wishlist_id, user_id, name, category, classification, priority,
                estimated_price, current_price, target_price, quantity, status, notes,
@@ -34,9 +33,9 @@ async fn export_csv(
                created_date, last_updated, purchased_date
         FROM items WHERE user_id = ?
         ORDER BY priority ASC, created_date ASC
-        "#,
-        claims.sub
+        "#
     )
+    .bind(&claims.sub)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -76,11 +75,10 @@ async fn import_csv(
     AuthUser(claims): AuthUser,
     mut multipart: Multipart,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let mut default_wishlist = sqlx::query_as!(
-        Wishlist,
-        "SELECT id, user_id, name, description, monthly_budget, carryover_budget, created_at, updated_at FROM wishlists WHERE user_id = ? LIMIT 1",
-        claims.sub
+    let default_wishlist = sqlx::query_as::<_, Wishlist>(
+        "SELECT id, user_id, name, description, monthly_budget, carryover_budget, created_at, updated_at FROM wishlists WHERE user_id = ? LIMIT 1"
     )
+    .bind(&claims.sub)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -89,11 +87,11 @@ async fn import_csv(
         Some(w) => w.id,
         None => {
             let new_id = uuid::Uuid::new_v4().to_string();
-            let _ = sqlx::query!(
-                "INSERT INTO wishlists (id, user_id, name, monthly_budget) VALUES (?, ?, 'Imported Wishlist', 3000.0)",
-                new_id,
-                claims.sub
+            let _ = sqlx::query(
+                "INSERT INTO wishlists (id, user_id, name, monthly_budget) VALUES (?, ?, 'Imported Wishlist', 3000.0)"
             )
+            .bind(&new_id)
+            .bind(&claims.sub)
             .execute(&state.db)
             .await;
             new_id
@@ -112,25 +110,25 @@ async fn import_csv(
                     let status = r.status.unwrap_or_else(|| "Waiting".to_string());
                     let target = r.target_price.unwrap_or(r.estimated_price * 0.85);
 
-                    let _ = sqlx::query!(
+                    let _ = sqlx::query(
                         r#"
                         INSERT INTO items (
                             id, wishlist_id, user_id, name, category, classification, priority,
                             estimated_price, current_price, target_price, status
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        "#,
-                        id,
-                        wishlist_id,
-                        claims.sub,
-                        r.item,
-                        r.category,
-                        class,
-                        priority,
-                        r.estimated_price,
-                        r.estimated_price,
-                        target,
-                        status
+                        "#
                     )
+                    .bind(&id)
+                    .bind(&wishlist_id)
+                    .bind(&claims.sub)
+                    .bind(&r.item)
+                    .bind(&r.category)
+                    .bind(&class)
+                    .bind(priority)
+                    .bind(r.estimated_price)
+                    .bind(r.estimated_price)
+                    .bind(target)
+                    .bind(&status)
                     .execute(&state.db)
                     .await;
 
@@ -147,15 +145,19 @@ async fn preload_starter(
     State(state): State<Arc<AppState>>,
     AuthUser(claims): AuthUser,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let wishlist_id = match sqlx::query_scalar!("SELECT id FROM wishlists WHERE user_id = ? LIMIT 1", claims.sub)
+    let wishlist_id_opt: Option<String> = sqlx::query_scalar("SELECT id FROM wishlists WHERE user_id = ? LIMIT 1")
+        .bind(&claims.sub)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    {
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let wishlist_id = match wishlist_id_opt {
         Some(id) => id,
         None => {
             let new_id = uuid::Uuid::new_v4().to_string();
-            let _ = sqlx::query!("INSERT INTO wishlists (id, user_id, name) VALUES (?, ?, 'Main Wishlist')", new_id, claims.sub)
+            let _ = sqlx::query("INSERT INTO wishlists (id, user_id, name) VALUES (?, ?, 'Main Wishlist')")
+                .bind(&new_id)
+                .bind(&claims.sub)
                 .execute(&state.db)
                 .await;
             new_id
@@ -181,25 +183,25 @@ async fn preload_starter(
         let status = r.status.unwrap_or_else(|| "Waiting".to_string());
         let target = r.target_price.unwrap_or(r.estimated_price * 0.85);
 
-        let _ = sqlx::query!(
+        let _ = sqlx::query(
             r#"
             INSERT INTO items (
                 id, wishlist_id, user_id, name, category, classification, priority,
                 estimated_price, current_price, target_price, status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
-            id,
-            wishlist_id,
-            claims.sub,
-            r.item,
-            r.category,
-            class,
-            priority,
-            r.estimated_price,
-            r.estimated_price,
-            target,
-            status
+            "#
         )
+        .bind(&id)
+        .bind(&wishlist_id)
+        .bind(&claims.sub)
+        .bind(&r.item)
+        .bind(&r.category)
+        .bind(&class)
+        .bind(priority)
+        .bind(r.estimated_price)
+        .bind(r.estimated_price)
+        .bind(target)
+        .bind(&status)
         .execute(&state.db)
         .await;
 
@@ -213,15 +215,21 @@ async fn export_json(
     State(state): State<Arc<AppState>>,
     AuthUser(claims): AuthUser,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let wishlists = sqlx::query_as!(Wishlist, "SELECT id, user_id, name, description, monthly_budget, carryover_budget, created_at, updated_at FROM wishlists WHERE user_id = ?", claims.sub)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let wishlists = sqlx::query_as::<_, Wishlist>(
+        "SELECT id, user_id, name, description, monthly_budget, carryover_budget, created_at, updated_at FROM wishlists WHERE user_id = ?"
+    )
+    .bind(&claims.sub)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let items = sqlx::query_as!(WishlistItem, "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE user_id = ?", claims.sub)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let items = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE user_id = ?"
+    )
+    .bind(&claims.sub)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(serde_json::json!({
         "wishlists": wishlists,

@@ -79,51 +79,48 @@ async fn create_item(
     let quantity = payload.quantity.unwrap_or(1);
     let status = payload.status.unwrap_or_else(|| "Waiting".to_string());
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO items (
             id, wishlist_id, user_id, name, category, classification, priority,
             estimated_price, current_price, target_price, quantity, status, notes,
             shopee_url, preferred_seller, preferred_shop
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
-        id,
-        payload.wishlist_id,
-        claims.sub,
-        payload.name,
-        payload.category,
-        classification,
-        priority,
-        payload.estimated_price,
-        current_price,
-        target_price,
-        quantity,
-        status,
-        payload.notes,
-        payload.shopee_url,
-        payload.preferred_seller,
-        payload.preferred_shop
+        "#
     )
+    .bind(&id)
+    .bind(&payload.wishlist_id)
+    .bind(&claims.sub)
+    .bind(&payload.name)
+    .bind(&payload.category)
+    .bind(&classification)
+    .bind(priority)
+    .bind(payload.estimated_price)
+    .bind(current_price)
+    .bind(target_price)
+    .bind(quantity)
+    .bind(&status)
+    .bind(&payload.notes)
+    .bind(&payload.shopee_url)
+    .bind(&payload.preferred_seller)
+    .bind(&payload.preferred_shop)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Record initial price history
     let history_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query!(
-        "INSERT INTO price_history (id, item_id, price) VALUES (?, ?, ?)",
-        history_id,
-        id,
-        current_price
-    )
-    .execute(&state.db)
-    .await;
+    let _ = sqlx::query("INSERT INTO price_history (id, item_id, price) VALUES (?, ?, ?)")
+        .bind(&history_id)
+        .bind(&id)
+        .bind(current_price)
+        .execute(&state.db)
+        .await;
 
-    let item = sqlx::query_as!(
-        WishlistItem,
-        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?",
-        id
+    let item = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?"
     )
+    .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -136,12 +133,11 @@ async fn get_item(
     AuthUser(claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<WishlistItem>, (StatusCode, String)> {
-    let item = sqlx::query_as!(
-        WishlistItem,
-        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ? AND user_id = ?",
-        id,
-        claims.sub
+    let item = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ? AND user_id = ?"
     )
+    .bind(&id)
+    .bind(&claims.sub)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
@@ -156,12 +152,11 @@ async fn update_item(
     Path(id): Path<String>,
     Json(payload): Json<UpdateItemRequest>,
 ) -> Result<Json<WishlistItem>, (StatusCode, String)> {
-    let current = sqlx::query_as!(
-        WishlistItem,
-        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ? AND user_id = ?",
-        id,
-        claims.sub
+    let current = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ? AND user_id = ?"
     )
+    .bind(&id)
+    .bind(&claims.sub)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
@@ -182,7 +177,7 @@ async fn update_item(
     let pref_shop = payload.preferred_shop.or(current.preferred_shop);
     let purchased_date = payload.purchased_date.or(current.purchased_date);
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         UPDATE items SET
             name = ?, category = ?, classification = ?, priority = ?,
@@ -191,32 +186,31 @@ async fn update_item(
             preferred_seller = ?, preferred_shop = ?, purchased_date = ?,
             last_updated = datetime('now')
         WHERE id = ?
-        "#,
-        name,
-        category,
-        classification,
-        priority,
-        est_price,
-        curr_price,
-        tgt_price,
-        qty,
-        status,
-        notes,
-        shopee_url,
-        pref_seller,
-        pref_shop,
-        purchased_date,
-        id
+        "#
     )
+    .bind(&name)
+    .bind(&category)
+    .bind(&classification)
+    .bind(priority)
+    .bind(est_price)
+    .bind(curr_price)
+    .bind(tgt_price)
+    .bind(qty)
+    .bind(&status)
+    .bind(&notes)
+    .bind(&shopee_url)
+    .bind(&pref_seller)
+    .bind(&pref_shop)
+    .bind(&purchased_date)
+    .bind(&id)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let updated = sqlx::query_as!(
-        WishlistItem,
-        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?",
-        id
+    let updated = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?"
     )
+    .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -229,14 +223,12 @@ async fn delete_item(
     AuthUser(claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let res = sqlx::query!(
-        "DELETE FROM items WHERE id = ? AND user_id = ?",
-        id,
-        claims.sub
-    )
-    .execute(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let res = sqlx::query("DELETE FROM items WHERE id = ? AND user_id = ?")
+        .bind(&id)
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if res.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Item not found".to_string()));
@@ -250,20 +242,17 @@ async fn mark_purchased(
     AuthUser(claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<WishlistItem>, (StatusCode, String)> {
-    sqlx::query!(
-        "UPDATE items SET status = 'Purchased', purchased_date = datetime('now'), last_updated = datetime('now') WHERE id = ? AND user_id = ?",
-        id,
-        claims.sub
-    )
-    .execute(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    sqlx::query("UPDATE items SET status = 'Purchased', purchased_date = datetime('now'), last_updated = datetime('now') WHERE id = ? AND user_id = ?")
+        .bind(&id)
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let updated = sqlx::query_as!(
-        WishlistItem,
-        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?",
-        id
+    let updated = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?"
     )
+    .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -276,20 +265,17 @@ async fn restore_purchased(
     AuthUser(claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<WishlistItem>, (StatusCode, String)> {
-    sqlx::query!(
-        "UPDATE items SET status = 'Waiting', purchased_date = NULL, last_updated = datetime('now') WHERE id = ? AND user_id = ?",
-        id,
-        claims.sub
-    )
-    .execute(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    sqlx::query("UPDATE items SET status = 'Waiting', purchased_date = NULL, last_updated = datetime('now') WHERE id = ? AND user_id = ?")
+        .bind(&id)
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let updated = sqlx::query_as!(
-        WishlistItem,
-        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?",
-        id
+    let updated = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?"
     )
+    .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -302,11 +288,16 @@ async fn manual_refresh_price(
     AuthUser(claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<Option<f64>>, (StatusCode, String)> {
-    let _ = sqlx::query!("SELECT id FROM items WHERE id = ? AND user_id = ?", id, claims.sub)
+    let row: Option<(String,)> = sqlx::query_as("SELECT id FROM items WHERE id = ? AND user_id = ?")
+        .bind(&id)
+        .bind(&claims.sub)
         .fetch_optional(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, "Item not found".to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if row.is_none() {
+        return Err((StatusCode::NOT_FOUND, "Item not found".to_string()));
+    }
 
     let price = refresh_item_price(&state.db, &id).await.map_err(|e| (StatusCode::BAD_REQUEST, e))?;
     Ok(Json(price))
@@ -317,11 +308,10 @@ async fn get_price_history(
     AuthUser(_claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<PriceHistory>>, (StatusCode, String)> {
-    let history = sqlx::query_as!(
-        PriceHistory,
-        "SELECT id, item_id, price, voucher_adjusted_price, has_free_shipping, recorded_at FROM price_history WHERE item_id = ? ORDER BY recorded_at ASC",
-        id
+    let history = sqlx::query_as::<_, PriceHistory>(
+        "SELECT id, item_id, price, voucher_adjusted_price, has_free_shipping, recorded_at FROM price_history WHERE item_id = ? ORDER BY recorded_at ASC"
     )
+    .bind(&id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -334,16 +324,16 @@ async fn get_price_stats(
     AuthUser(_claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<ItemPriceStats>, (StatusCode, String)> {
-    let item = sqlx::query_as!(
-        WishlistItem,
-        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?",
-        id
+    let item = sqlx::query_as::<_, WishlistItem>(
+        "SELECT id, wishlist_id, user_id, name, category, classification, priority, estimated_price, current_price, target_price, quantity, status, notes, shopee_url, shopee_item_id, shopee_shop_id, preferred_seller, preferred_shop, voucher_discount, has_free_shipping, rating, units_sold, is_in_stock, created_date, last_updated, purchased_date FROM items WHERE id = ?"
     )
+    .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let prices: Vec<f64> = sqlx::query_scalar!("SELECT price FROM price_history WHERE item_id = ? ORDER BY recorded_at ASC", id)
+    let prices: Vec<f64> = sqlx::query_scalar("SELECT price FROM price_history WHERE item_id = ? ORDER BY recorded_at ASC")
+        .bind(&id)
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

@@ -1,10 +1,10 @@
-use sqlx::SqlitePool;
+use sqlx::{Row, SqlitePool};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct HealthScoreBreakdown {
-    pub total_score: i64, // 0 - 100
-    pub status: String,   // "Excellent", "Good", "Needs Improvement", "At Risk"
+    pub total_score: i64,
+    pub status: String,
     pub budget_discipline_score: i64,
     pub needs_ratio_score: i64,
     pub wait_discipline_score: i64,
@@ -13,7 +13,7 @@ pub struct HealthScoreBreakdown {
 }
 
 pub async fn compute_health_score(pool: &SqlitePool, user_id: &str) -> Result<HealthScoreBreakdown, sqlx::Error> {
-    let counts = sqlx::query!(
+    let row = sqlx::query(
         r#"
         SELECT
             COUNT(*) as total_items,
@@ -23,28 +23,21 @@ pub async fn compute_health_score(pool: &SqlitePool, user_id: &str) -> Result<He
             SUM(CASE WHEN status = 'Archived' THEN 1 ELSE 0 END) as impulse_archived
         FROM items
         WHERE user_id = ?
-        "#,
-        user_id
+        "#
     )
+    .bind(user_id)
     .fetch_one(pool)
     .await?;
 
-    let total_items = counts.total_items.max(1);
-    let needs_count = counts.needs_count.unwrap_or(0);
-    let wants_count = counts.wants_count.unwrap_or(0);
-    let archived_count = counts.impulse_archived.unwrap_or(0);
+    let total_items: i64 = row.try_get::<i64, _>("total_items").unwrap_or(0).max(1);
+    let needs_count: i64 = row.try_get::<Option<i64>, _>("needs_count").ok().flatten().unwrap_or(0);
+    let wants_count: i64 = row.try_get::<Option<i64>, _>("wants_count").ok().flatten().unwrap_or(0);
+    let archived_count: i64 = row.try_get::<Option<i64>, _>("impulse_archived").ok().flatten().unwrap_or(0);
 
-    // 1. Needs vs Wants balance (reward having intentional needs managed)
     let needs_ratio = (needs_count as f64) / (total_items as f64);
     let needs_score = ((needs_ratio * 40.0) + 15.0).min(25.0) as i64;
-
-    // 2. Impulse control (penalize if many items were archived or rapidly purchased without waiting)
-    let impulse_score = (25 - (archived_count * 2)).max(5) as i64;
-
-    // 3. Waiting discipline (spending time watching sales rather than immediate impulsive buys)
+    let impulse_score = (25 - (archived_count * 2)).max(5);
     let wait_discipline = 25;
-
-    // 4. Budget compliance
     let budget_score = 25;
 
     let total = (needs_score + impulse_score + wait_discipline + budget_score).min(100).max(0);

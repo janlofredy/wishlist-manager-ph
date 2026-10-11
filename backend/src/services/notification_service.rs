@@ -1,5 +1,5 @@
 use sqlx::SqlitePool;
-use tracing::{info, warn};
+use crate::models::notification::UserSettings;
 
 pub async fn dispatch_notification(
     pool: &SqlitePool,
@@ -11,23 +11,23 @@ pub async fn dispatch_notification(
 ) -> Result<(), String> {
     // 1. Record In-App notification
     let notif_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query!(
-        "INSERT INTO notifications (id, user_id, item_id, title, message, alert_type) VALUES (?, ?, ?, ?, ?, ?)",
-        notif_id,
-        user_id,
-        item_id,
-        title,
-        message,
-        alert_type
+    let _ = sqlx::query(
+        "INSERT INTO notifications (id, user_id, item_id, title, message, alert_type) VALUES (?, ?, ?, ?, ?, ?)"
     )
+    .bind(&notif_id)
+    .bind(user_id)
+    .bind(item_id)
+    .bind(title)
+    .bind(message)
+    .bind(alert_type)
     .execute(pool)
     .await;
 
     // 2. Fetch User Channel Settings
-    let settings = sqlx::query!(
-        "SELECT telegram_chat_id, discord_webhook_url, enable_telegram, enable_discord FROM user_settings WHERE user_id = ?",
-        user_id
+    let settings = sqlx::query_as::<_, UserSettings>(
+        "SELECT user_id, telegram_chat_id, discord_webhook_url, webpush_subscription, enable_telegram, enable_discord, enable_webpush FROM user_settings WHERE user_id = ?"
     )
+    .bind(user_id)
     .fetch_optional(pool)
     .await
     .unwrap_or(None);

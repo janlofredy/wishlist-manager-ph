@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::Json,
-    routing::{get, post, put},
+    routing::{get, post},
     Router,
 };
 use std::sync::Arc;
@@ -24,11 +24,10 @@ async fn list_notifications(
     State(state): State<Arc<AppState>>,
     AuthUser(claims): AuthUser,
 ) -> Result<Json<Vec<Notification>>, (StatusCode, String)> {
-    let notifs = sqlx::query_as!(
-        Notification,
-        "SELECT id, user_id, item_id, title, message, alert_type, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
-        claims.sub
+    let notifs = sqlx::query_as::<_, Notification>(
+        "SELECT id, user_id, item_id, title, message, alert_type, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50"
     )
+    .bind(&claims.sub)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -41,14 +40,12 @@ async fn mark_notification_read(
     AuthUser(claims): AuthUser,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let _ = sqlx::query!(
-        "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?",
-        id,
-        claims.sub
-    )
-    .execute(&state.db)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    sqlx::query("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?")
+        .bind(&id)
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -57,11 +54,10 @@ async fn get_settings(
     State(state): State<Arc<AppState>>,
     AuthUser(claims): AuthUser,
 ) -> Result<Json<UserSettings>, (StatusCode, String)> {
-    let settings = sqlx::query_as!(
-        UserSettings,
-        "SELECT user_id, telegram_chat_id, discord_webhook_url, webpush_subscription, enable_telegram, enable_discord, enable_webpush FROM user_settings WHERE user_id = ?",
-        claims.sub
+    let settings = sqlx::query_as::<_, UserSettings>(
+        "SELECT user_id, telegram_chat_id, discord_webhook_url, webpush_subscription, enable_telegram, enable_discord, enable_webpush FROM user_settings WHERE user_id = ?"
     )
+    .bind(&claims.sub)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
@@ -87,7 +83,7 @@ async fn update_settings(
     let enable_dc = payload.enable_discord.map(|b| if b { 1 } else { 0 });
     let enable_wp = payload.enable_webpush.map(|b| if b { 1 } else { 0 });
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO user_settings (user_id, telegram_chat_id, discord_webhook_url, webpush_subscription, enable_telegram, enable_discord, enable_webpush)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -98,15 +94,15 @@ async fn update_settings(
             enable_telegram = COALESCE(excluded.enable_telegram, user_settings.enable_telegram),
             enable_discord = COALESCE(excluded.enable_discord, user_settings.enable_discord),
             enable_webpush = COALESCE(excluded.enable_webpush, user_settings.enable_webpush)
-        "#,
-        claims.sub,
-        payload.telegram_chat_id,
-        payload.discord_webhook_url,
-        payload.webpush_subscription,
-        enable_tg,
-        enable_dc,
-        enable_wp
+        "#
     )
+    .bind(&claims.sub)
+    .bind(&payload.telegram_chat_id)
+    .bind(&payload.discord_webhook_url)
+    .bind(&payload.webpush_subscription)
+    .bind(enable_tg)
+    .bind(enable_dc)
+    .bind(enable_wp)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -123,11 +119,10 @@ async fn list_happiness(
     State(state): State<Arc<AppState>>,
     AuthUser(claims): AuthUser,
 ) -> Result<Json<Vec<HappinessMetric>>, (StatusCode, String)> {
-    let metrics = sqlx::query_as!(
-        HappinessMetric,
-        "SELECT id, user_id, item_id, interval_type, satisfaction_score, regret_score, reflection_note, recorded_at FROM happiness_metrics WHERE user_id = ? ORDER BY recorded_at DESC",
-        claims.sub
+    let metrics = sqlx::query_as::<_, HappinessMetric>(
+        "SELECT id, user_id, item_id, interval_type, satisfaction_score, regret_score, reflection_note, recorded_at FROM happiness_metrics WHERE user_id = ? ORDER BY recorded_at DESC"
     )
+    .bind(&claims.sub)
     .fetch_all(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -142,25 +137,24 @@ async fn submit_happiness(
 ) -> Result<Json<HappinessMetric>, (StatusCode, String)> {
     let id = uuid::Uuid::new_v4().to_string();
 
-    sqlx::query!(
-        "INSERT INTO happiness_metrics (id, user_id, item_id, interval_type, satisfaction_score, regret_score, reflection_note) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        id,
-        claims.sub,
-        payload.item_id,
-        payload.interval_type,
-        payload.satisfaction_score,
-        payload.regret_score,
-        payload.reflection_note
+    sqlx::query(
+        "INSERT INTO happiness_metrics (id, user_id, item_id, interval_type, satisfaction_score, regret_score, reflection_note) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
+    .bind(&id)
+    .bind(&claims.sub)
+    .bind(&payload.item_id)
+    .bind(&payload.interval_type)
+    .bind(payload.satisfaction_score)
+    .bind(payload.regret_score)
+    .bind(&payload.reflection_note)
     .execute(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let created = sqlx::query_as!(
-        HappinessMetric,
-        "SELECT id, user_id, item_id, interval_type, satisfaction_score, regret_score, reflection_note, recorded_at FROM happiness_metrics WHERE id = ?",
-        id
+    let created = sqlx::query_as::<_, HappinessMetric>(
+        "SELECT id, user_id, item_id, interval_type, satisfaction_score, regret_score, reflection_note, recorded_at FROM happiness_metrics WHERE id = ?"
     )
+    .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

@@ -19,17 +19,13 @@ RUN npm run build
 FROM rust:bookworm AS backend-builder
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y pkg-config libssl-dev sqlite3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
 # Copy workspace & backend crates
 COPY Cargo.toml ./
 COPY backend ./backend
 
 WORKDIR /app/backend
-
-# Create temporary SQLite database for compile-time SQLx query macros
-RUN sqlite3 /tmp/build.db < schema.sql
-ENV DATABASE_URL="sqlite:/tmp/build.db"
 
 # Pre-compile release binary
 RUN cargo build --release
