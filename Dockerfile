@@ -16,7 +16,7 @@ RUN npm run build
 # ==========================================
 # STAGE 2: Build Backend (Rust Axum Binary)
 # ==========================================
-FROM rust:1.85-bookworm AS backend-builder
+FROM rust:bookworm AS backend-builder
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*

@@ -76,27 +76,45 @@ flowchart TD
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Easy Install
 
-### 1. Docker Compose (Recommended)
+### 1. Docker Compose (One-Click Setup)
 
-1. Clone repository and navigate to folder:
-   ```bash
-   git clone https://github.com/your-username/wishlist-manager-ph.git
-   cd wishlist-manager-ph
-   ```
+Create a `docker-compose.yml` file anywhere on your system:
 
-2. Copy example environment configuration:
-   ```bash
-   cp .env.example .env
-   ```
+```yaml
+services:
+  wishlist-manager:
+    image: ghcr.io/janlofredy/wishlist-manager-ph:latest
+    container_name: wishlist-manager-ph
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATA_DIR=/app/data
+      - DATABASE_URL=sqlite:/app/data/wishlist.db?mode=rwc
+      - JWT_SECRET=change-this-to-a-very-secure-random-secret-in-production
+      - TELEGRAM_BOT_TOKEN=
+      - TELEGRAM_CHAT_ID=
+      - DISCORD_WEBHOOK_URL=
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/system/sale-calendar"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+```
 
-3. Launch the container:
-   ```bash
-   docker compose up -d
-   ```
+Run the container:
 
-4. Open `http://localhost:3000` in your browser. The first user you register automatically becomes the **Admin**.
+```bash
+docker compose up -d
+```
+
+Open `http://localhost:3000` (or `http://<your-server-ip>:3000`) in your browser. The first user you register automatically receives the **Admin** role!
 
 ---
 
