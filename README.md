@@ -14,7 +14,7 @@
 6. [Budget Rollover & Purchase Advisor Engine](#-budget-rollover--purchase-advisor-engine)
 7. [Shopee Philippines Tracker](#-shopee-philippines-tracker)
 8. [Philippines Shopping Sale Calendar](#-philippines-shopping-sale-calendar)
-9. [CSV Import, Export & Preloaded Starter Items](#-csv-import-export--starter-data)
+9. [CSV Import & Export Format](#-csv-import--export-format)
 10. [REST API Endpoints](#-rest-api-endpoints)
 11. [Troubleshooting & FAQ](#-troubleshooting)
 12. [Roadmap](#-roadmap)
@@ -26,7 +26,7 @@
 - **Needs vs. Wants Intentional Classification**: Clearly tag every item as an essential `Need` or non-essential `Want`. The recommendation engine blocks impulse buys if essential needs are compromised.
 - **Multiple Wishlists with Independent Budgets**: Create distinct boards (e.g. *Personal Tech*, *Home Improvement*, *Hobby & RC*, *Family*) with dedicated monthly budgets and separate carryover ledgers.
 - **Automatic Budget Carryover (Rollover)**: Unused wishlist allocations (e.g., PHP 3,000 budget minus PHP 1,000 spent = PHP 2,000 carryover) automatically accumulate into following months, enabling big-ticket planning without debt.
-- **Buy Delay Impact Calculator**: Real-time projection showing: *"If I buy this Espresso Machine now, it delays my Standing Desk by 3 months and UPS by 2 months"*.
+- **Buy Delay Impact Calculator**: Real-time projection showing: *"If I buy this item now, it delays higher-priority goals and essential needs by X months"*.
 - **"What Should I Buy?" & "Should I Buy This?" AI Advisor**: Algorithmic scoring analyzing current wallet cash, discount depths, and opportunity costs.
 - **Wishlist Health Score (0–100)**: Evaluates savings discipline, wait times, and impulse control.
 - **Shopee Philippines Tracker**: URL parser extracting item and shop IDs, price history recording, lowest recorded alerts, and price drops.
@@ -143,13 +143,13 @@ Every item added to your wishlists is designated with an intentional classificat
 ### Priority Levels
 
 - **Priority 1: Quick Wins (< PHP 1,000)**  
-  Affordable items that give immediate satisfaction or quick utility without denting monthly targets (e.g. Oral-B Vitality, root tabs, wire strippers).
+  Affordable items that give immediate satisfaction or quick utility without denting monthly targets.
 - **Priority 2: Utility & Hobby (PHP 1,000 – 3,000)**  
-  Tools or hobby essentials that fit inside a single month's budget allocation (e.g. Simplus grinder, pressure washer, nozzles).
+  Tools or hobby essentials that fit inside a single month's budget allocation.
 - **Priority 3: Mid-Cost Wants (PHP 3,000 – 7,000)**  
-  Items requiring 1–2 months of rollover budget accumulation (e.g. AWP UPS, slow juicer, RC plane).
+  Items requiring 1–2 months of rollover budget accumulation.
 - **Priority 4: Large Purchases (> PHP 7,000)**  
-  Major purchases requiring 3+ months of rollover discipline (e.g. Standing desk, espresso machine, home theater, MIG welder).
+  Major purchases requiring 3+ months of rollover discipline.
 
 ---
 
@@ -196,41 +196,18 @@ Includes voucher recommendations: stacking Free Shipping vouchers, coins cashbac
 
 ---
 
-## 📦 CSV Import, Export & Starter Data
+## 📦 CSV Import & Export Format
 
-Wishlist Manager PH includes one-click preloading for the 26 curated starter items:
+Wishlist Manager PH supports exporting and importing your wishlist items via CSV spreadsheets:
 
 ```csv
 priority,item,category,classification,estimated_price,status,target_price
-1,Oral-B Vitality,Personal Care,Need,1000,Waiting,800
-2,SATA to USB 3.0 Adapter,Electronics,Need,300,Waiting,200
-3,Automatic Wire Stripper,Tools,Need,500,Waiting,350
-4,Microphone Arm,Desk Setup,Want,1000,Waiting,800
-5,Aquarium Root Tabs,Aquarium,Need,300,Waiting,200
-6,Gel Blaster Reload Bottle,Hobby,Want,200,Waiting,150
-7,Portable Picnic Blanket,Outdoor,Want,700,Waiting,500
-8,Car Table,Automotive,Want,800,Waiting,600
-9,Automatic Screw Magnetic Holder,Tools,Need,300,Waiting,200
-10,Simplus Coffee Grinder,Kitchen,Want,1800,Waiting,1500
-11,Cast Iron Grill Pan,Kitchen,Want,1500,Waiting,1200
-12,Pressure Washer,Tools,Want,3000,Waiting,2500
-13,Raspberry Pi Alternative,Electronics,Need,3000,Waiting,2500
-14,Monte Carlo Seed,Aquarium,Want,300,Waiting,200
-15,BambuLab A1 Hardened 0.4 Nozzle,3D Printing,Need,1000,Waiting,800
-16,BambuLab A1 0.2 Nozzle,3D Printing,Want,1000,Waiting,800
-17,Toy RC Boat,Hobby,Want,2500,Waiting,2000
-18,Simplus Slow Juicer,Kitchen,Want,4000,Waiting,3500
-19,Automatic On UPS AWP AID1500 Pro LCD,Electronics,Need,6000,Waiting,5000
-20,Car Portable Toilet,Automotive,Want,1500,Waiting,1200
-21,Road Bike Hydraulic Brifter Set,Cycling,Want,8000,Waiting,6500
-22,RC Foam Plane,Hobby,Want,5000,Waiting,4000
-23,Standing Desk 125x75cm,Furniture,Want,10000,Waiting,8500
-24,Simplus Espresso Machine,Kitchen,Want,8000,Waiting,7000
-25,Gasless MIG Welder,Tools,Want,7000,Waiting,6000
-26,5.1/7.1 Home Theater System,Entertainment,Want,15000,Waiting,12000
+1,Ergonomic Mouse,Desk Setup,Need,1200,Waiting,999
+2,Mechanical Keyboard,Desk Setup,Want,2500,Waiting,2000
+3,USB-C Hub,Electronics,Need,800,Waiting,650
 ```
 
-To preload, click **Preload 26 Starter Items** on the dashboard, or upload your own CSV spreadsheet via **Settings -> Import CSV**.
+Upload or download your wishlist anytime via **Settings -> Import / Export CSV**.
 
 ---
 
