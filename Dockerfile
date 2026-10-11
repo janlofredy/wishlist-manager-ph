@@ -24,7 +24,6 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/li
 # Copy workspace & backend crates
 COPY Cargo.toml ./
 COPY backend ./backend
-COPY data ./data
 
 WORKDIR /app/backend
 # Pre-compile release binary
@@ -56,9 +55,6 @@ COPY --from=backend-builder /app/backend/target/release/wishlist-manager-ph-back
 
 # Copy compiled static frontend SPA assets
 COPY --from=frontend-builder /app/frontend/build /app/frontend_build
-
-# Copy default starter data for initialization reference
-COPY data /app/data_starter
 
 # Expose Web Port
 EXPOSE 3000

@@ -1,21 +1,21 @@
 services:
   wishlist-manager:
-    image: wishlist-manager-ph:latest
+    image: ghcr.io/janlofredy/wishlist-manager-ph:latest
     build:
       context: .
       dockerfile: Dockerfile
     container_name: wishlist-manager-ph
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       - PORT=3000
       - DATA_DIR=/app/data
-      - DATABASE_URL=sqlite:/app/data/wishlist.db?mode=rwc
-      - JWT_SECRET=change-this-to-a-very-secure-random-secret-in-production
-      - TELEGRAM_BOT_TOKEN=
-      - TELEGRAM_CHAT_ID=
-      - DISCORD_WEBHOOK_URL=
+      - DATABASE_URL=${DATABASE_URL:-sqlite:/app/data/wishlist.db?mode=rwc}
+      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-very-secure-random-secret-in-production}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
     volumes:
       - ./data:/app/data
     healthcheck:
@@ -25,8 +25,8 @@ services:
       retries: 3
       start_period: 5s
 
-# Optional PostgreSQL setup:
-# Uncomment below if you prefer PostgreSQL over SQLite
+# Optional PostgreSQL configuration:
+# Uncomment below and set DATABASE_URL=postgres://wishlist:wishlist_secure_password@postgres:5432/wishlist_ph
 #
 #   postgres:
 #     image: postgres:16-alpine
@@ -38,3 +38,5 @@ services:
 #       POSTGRES_DB: wishlist_ph
 #     volumes:
 #       - ./pgdata:/var/lib/postgresql/data
+#     ports:
+#       - "5432:5432"
