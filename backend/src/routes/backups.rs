@@ -162,8 +162,16 @@ async fn preload_starter(
         }
     };
 
-    let starter_csv = include_str!("../../../data/starter_wishlist.csv");
-    let rows = parse_items_csv(starter_csv).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    let csv_path = format!("{}/starter_wishlist.csv", state.config.data_dir);
+    let starter_csv = std::fs::read_to_string(&csv_path)
+        .or_else(|_| std::fs::read_to_string("data/starter_wishlist.csv"))
+        .unwrap_or_default();
+
+    if starter_csv.trim().is_empty() {
+        return Ok(Json(serde_json::json!({ "preloaded_count": 0, "message": "No starter CSV file found" })));
+    }
+
+    let rows = parse_items_csv(&starter_csv).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let mut added = 0;
     for r in rows {
