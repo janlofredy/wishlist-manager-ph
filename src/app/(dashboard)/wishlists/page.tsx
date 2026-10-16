@@ -85,7 +85,7 @@ export default async function WishlistsPage() {
               Tracked Items ({primaryItems.length})
             </span>
             <span className="text-xs text-muted-foreground">
-              Click any item or &quot;Details&quot; to inspect &amp; edit
+              Click any item title to inspect &amp; edit
             </span>
           </div>
 

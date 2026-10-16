@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPHP } from "@/lib/utils";
 import {
-  ExternalLink,
   Trash2,
   CheckCircle,
   Layers,
@@ -34,18 +33,33 @@ export function CompactItemCard({
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(attachedAlternatives.length > 0);
 
+  const getPriorityLabel = (p: number) => {
+    switch (p) {
+      case 1:
+        return "Quick Win";
+      case 2:
+        return "Hobby & Utility";
+      case 3:
+        return "Mid-Cost";
+      case 4:
+        return "Large Purchase";
+      default:
+        return `Priority ${p}`;
+    }
+  };
+
   return (
     <Card className="p-3 transition-all hover:border-primary/40 group overflow-hidden">
       {/* Compact Main Row */}
       <div className="flex items-center justify-between gap-3 min-w-0">
         {/* Left: Badge + Title + Category */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {/* Need/Want compact indicator */}
+          {/* Need/Want pill with emoji icons */}
           <Badge
             variant={item.isNeed ? "need" : "want"}
-            className="text-[10px] px-1.5 py-0 h-5 shrink-0"
+            className="text-[10px] px-2 py-0.5 h-5 shrink-0 font-bold inline-flex items-center gap-1"
           >
-            {item.isNeed ? "Need" : "Want"}
+            {item.isNeed ? "🛡️ Need" : "✨ Want"}
           </Badge>
 
           {/* Clickable Title to open details modal */}
@@ -55,7 +69,7 @@ export function CompactItemCard({
                 type="button"
                 onClick={() => setDetailModalOpen(true)}
                 className="font-bold text-sm text-foreground hover:text-primary transition-colors truncate block max-w-full text-left"
-                title={item.name}
+                title="Click to view details and edit"
               >
                 {item.name}
               </button>
@@ -68,7 +82,7 @@ export function CompactItemCard({
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
               <span>{item.category}</span>
               <span>•</span>
-              <span>P{item.priority}</span>
+              <span className="text-foreground/80 font-medium">{getPriorityLabel(item.priority)}</span>
               {attachedAlternatives.length > 0 && (
                 <>
                   <span>•</span>
@@ -95,17 +109,6 @@ export function CompactItemCard({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {/* View/Edit Details Button */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setDetailModalOpen(true)}
-              className="h-7 px-2 text-xs rounded-lg font-medium"
-            >
-              Details
-            </Button>
-
             {item.status !== "Purchased" && (
               <Button
                 type="button"
