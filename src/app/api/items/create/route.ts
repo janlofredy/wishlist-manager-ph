@@ -53,7 +53,12 @@ export async function POST(req: Request) {
     try {
       const urlObj = new URL(shopeeUrl);
       const pathSegments = urlObj.pathname.split("/").filter(Boolean);
-      name = pathSegments[pathSegments.length - 1]?.replace(/-i\.\d+\.\d+/, "").replace(/-/g, " ") || "Shopee Item";
+      let rawSlug = pathSegments[pathSegments.length - 1] || "";
+      rawSlug = rawSlug.replace(/-i\.\d+\.\d+.*$/, "").replace(/\?.*$/, "");
+      try {
+        rawSlug = decodeURIComponent(rawSlug);
+      } catch {}
+      name = rawSlug.replace(/-/g, " ").trim() || "Shopee Item";
     } catch {
       name = "Saved Listing Item";
     }

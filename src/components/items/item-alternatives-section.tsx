@@ -90,60 +90,21 @@ export function ItemAlternativesSection({
         </Button>
       </div>
 
-      {/* Either / Or Comparison Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-        {/* Option A: Primary Item */}
-        <div className="p-2.5 rounded-xl border bg-primary/5 border-primary/20 flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-1">
-            <div>
-              <Badge variant="outline" className="text-[9px] bg-background">Option A (Primary)</Badge>
-              <div className="font-bold text-foreground mt-1 truncate">{primaryItem.name}</div>
-            </div>
-            <span className="font-black text-primary">{formatPHP(primaryItem.currentPrice)}</span>
-          </div>
-          {primaryItem.shopeeUrl && (
-            <a
-              href={primaryItem.shopeeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-orange-500 hover:underline flex items-center gap-1 mt-1.5"
-            >
-              Listing Link <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-          )}
-        </div>
-
-        {/* Attached Alternatives Picked From Wishlist */}
-        {attachedAlternatives.map((alt, idx) => (
-          <div key={alt.id} className="p-2.5 rounded-xl border bg-purple-500/5 border-purple-500/20 flex flex-col justify-between">
+      {/* Either / Or Comparison Grid - only rendered when there are attached alternatives */}
+      {attachedAlternatives.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+          {/* Option A: Primary Item */}
+          <div className="p-2.5 rounded-xl border bg-primary/5 border-primary/20 flex flex-col justify-between">
             <div className="flex items-start justify-between gap-1">
               <div>
-                <div className="flex items-center gap-1">
-                  <Badge variant="want" className="text-[9px]">Option {String.fromCharCode(66 + idx)}</Badge>
-                  <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                    {alt.category}
-                  </span>
-                </div>
-                <div className="font-bold text-foreground mt-1 truncate">{alt.name}</div>
+                <Badge variant="outline" className="text-[9px] bg-background">Option A (Primary)</Badge>
+                <div className="font-bold text-foreground mt-1 truncate">{primaryItem.name}</div>
               </div>
-              <div className="text-right">
-                <span className="font-black text-purple-600 dark:text-purple-400 block">
-                  {formatPHP(alt.currentPrice)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleDetachAlternative(alt.id)}
-                  disabled={loading}
-                  className="text-xs text-muted-foreground hover:text-primary mt-1 inline-flex items-center gap-1 font-semibold"
-                  title="Put back as normal standalone wishlist item"
-                >
-                  <Undo2 className="h-3 w-3" /> Put back
-                </button>
-              </div>
+              <span className="font-black text-primary">{formatPHP(primaryItem.currentPrice)}</span>
             </div>
-            {alt.shopeeUrl && (
+            {primaryItem.shopeeUrl && (
               <a
-                href={alt.shopeeUrl}
+                href={primaryItem.shopeeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[10px] text-orange-500 hover:underline flex items-center gap-1 mt-1.5"
@@ -152,8 +113,49 @@ export function ItemAlternativesSection({
               </a>
             )}
           </div>
-        ))}
-      </div>
+
+          {/* Attached Alternatives Picked From Wishlist */}
+          {attachedAlternatives.map((alt, idx) => (
+            <div key={alt.id} className="p-2.5 rounded-xl border bg-purple-500/5 border-purple-500/20 flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-1">
+                <div>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="want" className="text-[9px]">Option {String.fromCharCode(66 + idx)}</Badge>
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                      {alt.category}
+                    </span>
+                  </div>
+                  <div className="font-bold text-foreground mt-1 truncate">{alt.name}</div>
+                </div>
+                <div className="text-right">
+                  <span className="font-black text-purple-600 dark:text-purple-400 block">
+                    {formatPHP(alt.currentPrice)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDetachAlternative(alt.id)}
+                    disabled={loading}
+                    className="text-xs text-muted-foreground hover:text-primary mt-1 inline-flex items-center gap-1 font-semibold"
+                    title="Put back as normal standalone wishlist item"
+                  >
+                    <Undo2 className="h-3 w-3" /> Put back
+                  </button>
+                </div>
+              </div>
+              {alt.shopeeUrl && (
+                <a
+                  href={alt.shopeeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-orange-500 hover:underline flex items-center gap-1 mt-1.5"
+                >
+                  Listing Link <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Choose from Wishlist Picker */}
       {showPicker && (

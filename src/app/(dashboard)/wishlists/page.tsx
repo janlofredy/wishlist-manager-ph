@@ -140,7 +140,7 @@ export default async function WishlistsPage() {
               return (
                 <Card key={item.id} className="p-4 flex flex-col justify-between gap-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant={item.isNeed ? "need" : "want"}>
                           {item.isNeed ? "🛡️ Need" : "✨ Want"}
@@ -169,10 +169,10 @@ export default async function WishlistsPage() {
                         </Badge>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-base mt-1">{item.name}</h3>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <h3 className="font-bold text-base leading-tight">{item.name}</h3>
                         {item.notes && (
-                          <span className="text-[11px] font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md mt-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                             {item.notes}
                           </span>
                         )}
@@ -183,33 +183,33 @@ export default async function WishlistsPage() {
                           href={item.shopeeUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-orange-500 hover:underline"
+                          className="inline-flex items-center gap-1 text-xs text-orange-500 hover:underline font-medium"
                         >
                           Shopee Listing <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0">
+                    <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0">
                       <div className="text-left sm:text-right">
-                        <div className="text-lg font-black text-primary">
+                        <div className="text-xl font-black text-primary tracking-tight">
                           {formatPHP(item.currentPrice)}
                         </div>
-                        {item.targetPrice && (
-                          <span className="text-[10px] text-muted-foreground block">
+                        {item.targetPrice ? (
+                          <span className="text-[11px] text-muted-foreground block font-medium">
                             Target: {formatPHP(item.targetPrice)}
                           </span>
-                        )}
+                        ) : null}
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         {item.status !== "Purchased" && (
                           <form action={markPurchased.bind(null, item.id)}>
                             <Button
                               type="submit"
                               variant="outline"
                               size="sm"
-                              className="rounded-lg h-9 text-xs text-emerald-600 dark:text-emerald-400 gap-1"
+                              className="rounded-xl h-9 text-xs text-emerald-600 dark:text-emerald-400 gap-1.5 font-bold"
                             >
                               <CheckCircle className="h-3.5 w-3.5" /> Bought
                             </Button>
@@ -221,7 +221,7 @@ export default async function WishlistsPage() {
                             type="submit"
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 text-muted-foreground hover:text-destructive rounded-lg"
+                            className="h-9 w-9 text-muted-foreground hover:text-destructive rounded-xl"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
