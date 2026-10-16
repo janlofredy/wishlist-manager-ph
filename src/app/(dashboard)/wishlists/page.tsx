@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { items, wishlists } from "@/db/schema";
+import { items, wishlists, itemAlternatives } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { formatPHP } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { revalidatePath } from "next/cache";
 import { SmartItemForm } from "@/components/items/smart-item-form";
+import { ItemAlternativesSection } from "@/components/items/item-alternatives-section";
 import Link from "next/link";
 import {
   Sparkles,
@@ -46,6 +47,8 @@ export default async function WishlistsPage() {
   const userItems = await db.query.items.findMany({
     where: eq(items.userId, userId),
   });
+
+  const allAlternatives = await db.query.itemAlternatives.findMany();
 
   async function addItem(formData: FormData) {
     "use server";
@@ -217,6 +220,15 @@ export default async function WishlistsPage() {
                     </form>
                   </div>
                 </div>
+
+                {/* Either / Or Alternatives Section (e.g. iPad Air vs iPad Mini) */}
+                <ItemAlternativesSection
+                  itemId={item.id}
+                  primaryTitle={item.name}
+                  primaryPrice={item.currentPrice}
+                  primaryShopeeUrl={item.shopeeUrl}
+                  alternatives={allAlternatives.filter((alt) => alt.itemId === item.id)}
+                />
               </Card>
             ))
           )}

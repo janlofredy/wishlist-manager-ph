@@ -110,6 +110,18 @@ sqlite.exec(`
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS item_alternative (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    price REAL NOT NULL,
+    shopee_url TEXT,
+    notes TEXT,
+    is_selected INTEGER DEFAULT 0,
+    created_at TEXT,
+    FOREIGN KEY (item_id) REFERENCES item(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS price_history (
     id TEXT PRIMARY KEY,
     item_id TEXT NOT NULL,

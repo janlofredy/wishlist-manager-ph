@@ -108,7 +108,23 @@ export const items = sqliteTable("item", {
 });
 
 // ==========================================
-// 5. Price Tracking History
+// 5. Alternative Items / Links (Either-Or choices)
+// ==========================================
+export const itemAlternatives = sqliteTable("item_alternative", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  itemId: text("item_id")
+    .notNull()
+    .references(() => items.id, { onDelete: "cascade" }),
+  title: text("title").notNull(), // e.g. "iPad Air (M2)" vs "iPad Mini"
+  price: real("price").notNull(),
+  shopeeUrl: text("shopee_url"),
+  notes: text("notes"), // e.g. "Better screen, higher cost"
+  isSelected: integer("is_selected", { mode: "boolean" }).default(false),
+  createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
+});
+
+// ==========================================
+// 6. Price Tracking History
 // ==========================================
 export const priceHistory = sqliteTable("price_history", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
