@@ -12,15 +12,41 @@ export async function POST(req: Request) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const formData = await req.formData();
-  const shopeeUrl = (formData.get("shopeeUrl") as string) || null;
-  let name = (formData.get("name") as string)?.trim();
-  const estimatedPrice = parseFloat(formData.get("price") as string) || 0;
-  const targetPrice = parseFloat(formData.get("targetPrice") as string) || null;
-  const priority = parseInt(formData.get("priority") as string) || 2;
-  const isNeed = formData.get("isNeed") === "on" || formData.get("isNeed") === "true";
-  const category = (formData.get("category") as string) || "General";
-  let wishlistId = formData.get("wishlistId") as string;
+  let shopeeUrl: string | null = null;
+  let name: string | null = null;
+  let estimatedPrice = 0;
+  let targetPrice: number | null = null;
+  let priority = 2;
+  let isNeed = false;
+  let category = "General";
+  let wishlistId: string | null = null;
+  let variation: string | null = null;
+
+  const contentType = req.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const json = await req.json();
+    shopeeUrl = json.shopeeUrl || null;
+    name = json.name ? String(json.name).trim() : null;
+    estimatedPrice = typeof json.price === "number" ? json.price : parseFloat(json.price) || 0;
+    targetPrice = json.targetPrice ? (typeof json.targetPrice === "number" ? json.targetPrice : parseFloat(json.targetPrice)) : null;
+    priority = typeof json.priority === "number" ? json.priority : parseInt(json.priority) || 2;
+    isNeed = Boolean(json.isNeed);
+    category = json.category || "General";
+    wishlistId = json.wishlistId || null;
+    variation = json.variation || null;
+  } else {
+    const formData = await req.formData();
+    shopeeUrl = (formData.get("shopeeUrl") as string) || null;
+    name = (formData.get("name") as string)?.trim() || null;
+    estimatedPrice = parseFloat(formData.get("price") as string) || 0;
+    targetPrice = parseFloat(formData.get("targetPrice") as string) || null;
+    priority = parseInt(formData.get("priority") as string) || 2;
+    isNeed = formData.get("isNeed") === "on" || formData.get("isNeed") === "true";
+    category = (formData.get("category") as string) || "General";
+    wishlistId = (formData.get("wishlistId") as string) || null;
+    variation = (formData.get("variation") as string) || null;
+  }
 
   // If user only provided a link and name is blank, extract a friendly fallback title
   if (!name && shopeeUrl) {
@@ -42,8 +68,6 @@ export async function POST(req: Request) {
     wishlistId = defaultList?.id || "";
   }
 
-  const variation = (formData.get("variation") as string) || null;
-
   await db.insert(items).values({
     wishlistId,
     userId,
@@ -58,6 +82,10 @@ export async function POST(req: Request) {
     notes: variation ? `Option: ${variation}` : null,
     status: "Waiting",
   });
+
+  if (contentType.includes("application/json")) {
+    return NextResponse.json({ success: true });
+  }
 
   return NextResponse.redirect(new URL("/wishlists", req.url));
 }

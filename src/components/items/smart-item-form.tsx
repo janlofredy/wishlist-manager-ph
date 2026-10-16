@@ -95,6 +95,50 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
     }
   }
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setStatusMessage(null);
+
+    try {
+      const res = await fetch("/api/items/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wishlistId,
+          shopeeUrl: productUrl || null,
+          name: name || null,
+          price: parseFloat(price) || 0,
+          targetPrice: targetPrice ? parseFloat(targetPrice) : null,
+          category,
+          priority,
+          isNeed,
+          variation: selectedVariation || null,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save item");
+      }
+
+      // Reset form and reload list
+      setProductUrl("");
+      setName("");
+      setPrice("");
+      setTargetPrice("");
+      setSelectedVariation("");
+      setPriceRange(null);
+      setIsNeed(false);
+      window.location.reload();
+    } catch (err: any) {
+      setStatusMessage(`Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <Card className="p-6 h-fit border-2 border-primary/20 shadow-md">
       <CardHeader className="p-0 mb-4">
@@ -111,7 +155,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
         </p>
       </CardHeader>
 
-      <form action="/api/items/create" method="POST" className="space-y-4 text-sm">
+      <form onSubmit={handleSubmit} className="space-y-4 text-sm">
         <input type="hidden" name="wishlistId" value={wishlistId} />
 
         {/* 1. Shopee / Lazada URL Input */}
@@ -259,8 +303,16 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
           </label>
         </div>
 
-        <Button type="submit" className="w-full font-bold rounded-xl gap-2 shadow-md">
-          <Plus className="h-4 w-4" /> Add to Wishlist
+        <Button type="submit" className="w-full font-bold rounded-xl gap-2 shadow-md" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" /> Add to Wishlist
+            </>
+          )}
         </Button>
       </form>
     </Card>
