@@ -50,8 +50,11 @@ export function CompactItemCard({
 
   return (
     <Card className="p-3 transition-all hover:border-primary/40 group overflow-hidden">
-      {/* Compact Main Row */}
-      <div className="flex items-center justify-between gap-3 min-w-0">
+      {/* Compact Main Row - clicking outside title/buttons toggles alternatives */}
+      <div
+        onClick={() => setShowAlternatives((prev) => !prev)}
+        className="flex items-center justify-between gap-3 min-w-0 cursor-pointer select-none"
+      >
         {/* Left: Badge + Title + Category */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* Need/Want pill with emoji icons only */}
@@ -68,8 +71,11 @@ export function CompactItemCard({
             <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
-                onClick={() => setDetailModalOpen(true)}
-                className="font-bold text-sm text-foreground hover:text-primary transition-colors truncate block max-w-full text-left"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDetailModalOpen(true);
+                }}
+                className="font-bold text-sm text-foreground hover:text-primary transition-colors truncate block max-w-full text-left cursor-pointer"
                 title="Click to view details and edit"
               >
                 {item.name}
@@ -109,7 +115,10 @@ export function CompactItemCard({
             ) : null}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div
+            className="flex items-center gap-1 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             {item.status !== "Purchased" && (
               <Button
                 type="button"
