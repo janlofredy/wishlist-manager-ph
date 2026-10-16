@@ -1,83 +1,96 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import { formatPHP } from "@/lib/utils";
-import { Split, Plus, ExternalLink, Undo2, ArrowRightLeft, Sparkles } from "lucide-react";
-
-export interface WishlistItemSimple {
-  id: string;
-  name: string;
-  currentPrice: number;
-  shopeeUrl?: string | null;
-  category: string;
-  isNeed: boolean;
-  parentItemId?: string | null;
-}
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ExternalLink,
+  Plus,
+  ArrowRightLeft,
+  Loader2,
+  Undo2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ItemAlternativesSectionProps {
-  primaryItem: WishlistItemSimple;
-  availableItemsToPick: WishlistItemSimple[]; // Other normal items from the wishlist
-  attachedAlternatives: WishlistItemSimple[]; // Items currently attached as alternatives to this item
+  primaryItem: any;
+  availableItemsToPick: any[];
+  attachedAlternatives: any[];
 }
 
 export function ItemAlternativesSection({
   primaryItem,
-  availableItemsToPick = [],
-  attachedAlternatives = [],
+  availableItemsToPick,
+  attachedAlternatives,
 }: ItemAlternativesSectionProps) {
+  const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
-  const [selectedChildId, setSelectedChildId] = useState("");
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleLinkAlternative(e: React.FormEvent) {
+  const handleLinkAlternative = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedChildId) return;
+    if (!selectedItemId) return;
 
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/items/alternatives", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "attach",
           parentItemId: primaryItem.id,
-          childItemId: selectedChildId,
+          childItemId: selectedItemId,
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to link item");
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to pair item");
+
+      setSelectedItemId("");
+      setShowPicker(false);
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handleDetachAlternative(childItemId: string) {
+  const handleDetachAlternative = async (childItemId: string) => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch(`/api/items/alternatives?childItemId=${childItemId}`, {
-        method: "DELETE",
+      const res = await fetch("/api/items/alternatives", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "detach",
+          childItemId,
+        }),
       });
 
-      if (!res.ok) throw new Error("Failed to detach item");
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to detach item");
+
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }
-
-  const totalOptionsCount = attachedAlternatives.length + 1;
+  };
 
   return (
-    <div className="mt-3 pt-3 border-t text-xs">
-      <div className="flex items-center justify-between">
-        <span className="font-bold flex items-center gap-1.5 text-muted-foreground">
-          <Split className="h-3.5 w-3.5 text-purple-500" /> &quot;Either / Or&quot; Alternatives ({totalOptionsCount} choices)
+    <div className="space-y-2">
+      {/* Header / Trigger */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+          <ArrowRightLeft className="h-3.5 w-3.5" />
+          &ldquo;Either / Or&rdquo; Alternatives ({attachedAlternatives.length + 1} choices)
         </span>
         <Button
           type="button"
@@ -94,64 +107,82 @@ export function ItemAlternativesSection({
       {attachedAlternatives.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
           {/* Option A: Primary Item */}
-          <div className="p-2.5 rounded-xl border bg-primary/5 border-primary/20 flex flex-col justify-between">
-            <div className="flex items-start justify-between gap-1">
-              <div>
-                <Badge variant="outline" className="text-[9px] bg-background">Option A (Primary)</Badge>
-                <div className="font-bold text-foreground mt-1 truncate">{primaryItem.name}</div>
+          <div className="p-3 rounded-xl border bg-primary/5 border-primary/20 flex flex-col justify-between min-w-0">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <Badge variant="outline" className="text-[10px] bg-background shrink-0">
+                  Option A (Primary)
+                </Badge>
+                <span className="font-black text-sm text-primary shrink-0">
+                  {formatPHP(primaryItem.currentPrice)}
+                </span>
               </div>
-              <span className="font-black text-primary">{formatPHP(primaryItem.currentPrice)}</span>
+              <div className="font-bold text-xs text-foreground line-clamp-2 break-words" title={primaryItem.name}>
+                {primaryItem.name}
+              </div>
             </div>
             {primaryItem.shopeeUrl && (
-              <a
-                href={primaryItem.shopeeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-orange-500 hover:underline flex items-center gap-1 mt-1.5"
-              >
-                Listing Link <ExternalLink className="h-2.5 w-2.5" />
-              </a>
+              <div className="pt-2 mt-1 border-t border-border/40">
+                <a
+                  href={primaryItem.shopeeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-orange-500 hover:underline inline-flex items-center gap-1 font-medium"
+                >
+                  Listing Link <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              </div>
             )}
           </div>
 
           {/* Attached Alternatives Picked From Wishlist */}
           {attachedAlternatives.map((alt, idx) => (
-            <div key={alt.id} className="p-2.5 rounded-xl border bg-purple-500/5 border-purple-500/20 flex flex-col justify-between">
-              <div className="flex items-start justify-between gap-1">
-                <div>
-                  <div className="flex items-center gap-1">
-                    <Badge variant="want" className="text-[9px]">Option {String.fromCharCode(66 + idx)}</Badge>
-                    <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+            <div
+              key={alt.id}
+              className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20 flex flex-col justify-between min-w-0"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Badge variant="want" className="text-[10px] shrink-0">
+                      Option {String.fromCharCode(66 + idx)}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground truncate">
                       {alt.category}
                     </span>
                   </div>
-                  <div className="font-bold text-foreground mt-1 truncate">{alt.name}</div>
-                </div>
-                <div className="text-right">
-                  <span className="font-black text-purple-600 dark:text-purple-400 block">
+                  <span className="font-black text-sm text-purple-600 dark:text-purple-400 shrink-0">
                     {formatPHP(alt.currentPrice)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleDetachAlternative(alt.id)}
-                    disabled={loading}
-                    className="text-xs text-muted-foreground hover:text-primary mt-1 inline-flex items-center gap-1 font-semibold"
-                    title="Put back as normal standalone wishlist item"
-                  >
-                    <Undo2 className="h-3 w-3" /> Put back
-                  </button>
+                </div>
+                <div className="font-bold text-xs text-foreground line-clamp-2 break-words" title={alt.name}>
+                  {alt.name}
                 </div>
               </div>
-              {alt.shopeeUrl && (
-                <a
-                  href={alt.shopeeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-orange-500 hover:underline flex items-center gap-1 mt-1.5"
+
+              <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/40 text-[10px]">
+                {alt.shopeeUrl ? (
+                  <a
+                    href={alt.shopeeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-orange-500 hover:underline inline-flex items-center gap-1 font-medium truncate max-w-[120px]"
+                  >
+                    Listing Link <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                  </a>
+                ) : (
+                  <span />
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDetachAlternative(alt.id)}
+                  disabled={loading}
+                  className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 font-semibold transition-colors shrink-0 ml-auto"
+                  title="Put back as normal standalone wishlist item"
                 >
-                  Listing Link <ExternalLink className="h-2.5 w-2.5" />
-                </a>
-              )}
+                  <Undo2 className="h-3 w-3" /> Put back
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -164,47 +195,50 @@ export function ItemAlternativesSection({
             <ArrowRightLeft className="h-3.5 w-3.5 text-primary" /> Choose an item from your wishlist to pair as an alternative:
           </div>
 
-          {availableItemsToPick.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic py-1">
-              No other standalone items available to pair. Add another item to your wishlist first!
-            </p>
-          ) : (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <select
-                value={selectedChildId}
-                onChange={(e) => setSelectedChildId(e.target.value)}
-                className="h-9 flex-1 rounded-xl border border-input bg-background px-3 text-xs"
-                required
-              >
-                <option value="">-- Select an item to pair (e.g. iPad Mini) --</option>
-                {availableItemsToPick.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} ({formatPHP(item.currentPrice)})
-                  </option>
-                ))}
-              </select>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <select
+              value={selectedItemId}
+              onChange={(e) => setSelectedItemId(e.target.value)}
+              className="flex-1 h-9 px-3 text-xs rounded-xl border bg-background border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              required
+            >
+              <option value="">-- Select an item to pair --</option>
+              {availableItemsToPick.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} ({formatPHP(item.currentPrice)})
+                </option>
+              ))}
+            </select>
 
-              <div className="flex items-center gap-1.5 justify-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => setShowPicker(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="h-8 text-xs font-bold gap-1"
-                  disabled={loading || !selectedChildId}
-                >
-                  Pair as Alternative
-                </Button>
-              </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={loading || !selectedItemId}
+                className="h-9 px-3 text-xs rounded-xl gap-1"
+              >
+                {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+                Pair
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPicker(false)}
+                className="h-9 px-2 text-xs rounded-xl"
+              >
+                Cancel
+              </Button>
             </div>
+          </div>
+
+          {availableItemsToPick.length === 0 && (
+            <p className="text-[11px] text-muted-foreground italic">
+              No other items available in your wishlist to pair. Add more items first!
+            </p>
           )}
+
+          {error && <div className="text-[11px] text-destructive">{error}</div>}
         </form>
       )}
     </div>

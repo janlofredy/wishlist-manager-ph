@@ -9,7 +9,6 @@ import {
   ExternalLink,
   Trash2,
   CheckCircle,
-  MoreHorizontal,
   Layers,
   ChevronDown,
   ChevronUp,
@@ -36,9 +35,9 @@ export function CompactItemCard({
   const [showAlternatives, setShowAlternatives] = useState(attachedAlternatives.length > 0);
 
   return (
-    <Card className="p-3 transition-all hover:border-primary/40 group">
+    <Card className="p-3 transition-all hover:border-primary/40 group overflow-hidden">
       {/* Compact Main Row */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 min-w-0">
         {/* Left: Badge + Title + Category */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* Need/Want compact indicator */}
@@ -51,12 +50,12 @@ export function CompactItemCard({
 
           {/* Clickable Title to open details modal */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => setDetailModalOpen(true)}
-                className="font-bold text-sm text-foreground hover:text-primary transition-colors truncate text-left"
-                title="Click to view details and edit"
+                className="font-bold text-sm text-foreground hover:text-primary transition-colors truncate block max-w-full text-left"
+                title={item.name}
               >
                 {item.name}
               </button>
@@ -83,19 +82,19 @@ export function CompactItemCard({
         </div>
 
         {/* Right: Price + Quick Actions */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="text-right">
-            <span className="font-black text-sm md:text-base text-primary">
+        <div className="flex items-center gap-3 shrink-0 ml-2">
+          <div className="text-right shrink-0">
+            <span className="font-black text-sm md:text-base text-primary whitespace-nowrap block">
               {formatPHP(item.currentPrice)}
             </span>
             {item.targetPrice ? (
-              <span className="text-[10px] text-muted-foreground block -mt-0.5">
+              <span className="text-[10px] text-muted-foreground block -mt-0.5 whitespace-nowrap">
                 Target: {formatPHP(item.targetPrice)}
               </span>
             ) : null}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {/* View/Edit Details Button */}
             <Button
               type="button"
