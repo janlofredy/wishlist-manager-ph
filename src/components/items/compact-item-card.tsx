@@ -31,7 +31,7 @@ export function CompactItemCard({
   onDeleteItem,
 }: CompactItemCardProps) {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [showAlternatives, setShowAlternatives] = useState(attachedAlternatives.length > 0);
+  const [showAlternatives, setShowAlternatives] = useState(false);
 
   const getPriorityLabel = (p: number) => {
     switch (p) {
