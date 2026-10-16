@@ -26,4 +26,5 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
   },
+  trustHost: true,
 };
