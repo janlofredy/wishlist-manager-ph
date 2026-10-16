@@ -54,12 +54,13 @@ export function CompactItemCard({
       <div className="flex items-center justify-between gap-3 min-w-0">
         {/* Left: Badge + Title + Category */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {/* Need/Want pill with emoji icons */}
+          {/* Need/Want pill with emoji icons only */}
           <Badge
             variant={item.isNeed ? "need" : "want"}
-            className="text-[10px] px-2 py-0.5 h-5 shrink-0 font-bold inline-flex items-center gap-1"
+            className="text-xs px-1.5 py-0.5 h-6 shrink-0 font-bold inline-flex items-center justify-center cursor-default select-none"
+            title={item.isNeed ? "Essential Need" : "Want"}
           >
-            {item.isNeed ? "🛡️ Need" : "✨ Want"}
+            {item.isNeed ? "🛡️" : "✨"}
           </Badge>
 
           {/* Clickable Title to open details modal */}
