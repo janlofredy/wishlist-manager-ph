@@ -123,20 +123,28 @@ export default async function DashboardPage() {
           </Badge>
         </Card>
 
-        {/* Dynamic Suggested Budget */}
+        {/* Dynamic / Manual Monthly Budget */}
         <Card className="p-6 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Suggested Monthly Wishlist
+                Monthly Wishlist Budget
               </span>
-              <Badge variant="want">Smart Suggestion</Badge>
+              <Badge variant={profile?.customWishlistBudget ? "default" : "want"}>
+                {profile?.customWishlistBudget ? "Manual Fixed" : "Smart Suggestion"}
+              </Badge>
             </div>
             <div className="text-3xl font-black mt-2 text-primary">
-              {formatPHP(budgetAnalysis.suggestedWishlistBudget)}
+              {formatPHP(
+                profile?.customWishlistBudget && profile.customWishlistBudget > 0
+                  ? profile.customWishlistBudget
+                  : budgetAnalysis.suggestedWishlistBudget
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Derived from {formatPHP(budgetAnalysis.avgMonthlyIncome)} income minus bills & 20% safe savings.
+              {profile?.customWishlistBudget
+                ? "Manually locked budget. Tap 'Adjust Income' to change or reset to auto."
+                : `Derived from ${formatPHP(budgetAnalysis.avgMonthlyIncome)} income minus bills & 20% safe savings.`}
             </p>
           </div>
 
