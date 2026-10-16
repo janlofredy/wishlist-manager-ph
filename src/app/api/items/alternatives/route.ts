@@ -1,49 +1,56 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { itemAlternatives, items } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { items } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+// POST /api/items/alternatives
+// Body: { parentItemId: string, childItemId: string }
+// Links an existing wishlist item as an alternative under parentItemId
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
-  const { itemId, title, price, shopeeUrl, notes } = body;
+  const { parentItemId, childItemId } = body;
 
-  if (!itemId || !title || typeof price !== "number") {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  if (!parentItemId || !childItemId) {
+    return NextResponse.json({ error: "parentItemId and childItemId required" }, { status: 400 });
   }
 
-  const created = await db
-    .insert(itemAlternatives)
-    .values({
-      itemId,
-      title,
-      price,
-      shopeeUrl,
-      notes,
-    })
-    .returning();
+  // Ensure both items belong to this user
+  await db
+    .update(items)
+    .set({ parentItemId })
+    .where(and(eq(items.id, childItemId), eq(items.userId, userId)));
 
-  return NextResponse.json(created[0]);
+  return NextResponse.json({ success: true });
 }
 
+// DELETE /api/items/alternatives?childItemId=...
+// Detaches an alternative item back to being an independent normal wishlist item
 export async function DELETE(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
+  const childItemId = searchParams.get("childItemId");
 
-  if (!id) {
-    return NextResponse.json({ error: "Alternative ID required" }, { status: 400 });
+  if (!childItemId) {
+    return NextResponse.json({ error: "childItemId required" }, { status: 400 });
   }
 
-  await db.delete(itemAlternatives).where(eq(itemAlternatives.id, id));
+  // Set parentItemId back to null so it returns as a normal item in the main wishlist
+  await db
+    .update(items)
+    .set({ parentItemId: null })
+    .where(and(eq(items.id, childItemId), eq(items.userId, userId)));
+
   return NextResponse.json({ success: true });
 }

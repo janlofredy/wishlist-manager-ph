@@ -105,6 +105,7 @@ sqlite.exec(`
     stock_status TEXT DEFAULT 'In Stock',
     last_checked TEXT,
     purchased_at TEXT,
+    parent_item_id TEXT,
     created_at TEXT,
     FOREIGN KEY (wishlist_id) REFERENCES wishlist(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
@@ -155,5 +156,12 @@ sqlite.exec(`
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
   );
 `);
+
+// Safe runtime migration for existing databases
+try {
+  sqlite.exec("ALTER TABLE item ADD COLUMN parent_item_id TEXT;");
+} catch (e) {
+  // column already exists
+}
 
 export const db = drizzle(sqlite, { schema });

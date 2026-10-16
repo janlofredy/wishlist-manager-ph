@@ -104,6 +104,7 @@ export const items = sqliteTable("item", {
   stockStatus: text("stock_status").default("In Stock"),
   lastChecked: text("last_checked"),
   purchasedAt: text("purchased_at"),
+  parentItemId: text("parent_item_id"), // If set, this item is an "Either/Or" alternative to another item
   createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
 });
 
