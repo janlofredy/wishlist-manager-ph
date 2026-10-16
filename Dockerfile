@@ -1,79 +1,60 @@
-# Multi-stage Dockerfile for Wishlist Manager PH
-# Builds for linux/amd64 and linux/arm64 architectures
+# ==========================================
+# STAGE 1: Install dependencies
+# ==========================================
+FROM node:22-alpine AS deps
+RUN apk add --no-cache libc6-compat python3 make g++
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
 
 # ==========================================
-# STAGE 1: Build Frontend (SvelteKit SPA)
+# STAGE 2: Build the Next.js application
 # ==========================================
-FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-builder
-WORKDIR /app/frontend
+FROM node:22-alpine AS builder
+WORKDIR /app
 
-COPY frontend/package*.json ./
-RUN npm ci || npm install
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-COPY frontend/ ./
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
 RUN npm run build
 
 # ==========================================
-# STAGE 2: Build Backend (Rust Axum Binary)
+# STAGE 3: Minimal production runtime
 # ==========================================
-FROM rust:bookworm AS backend-builder
+FROM node:22-alpine AS runner
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
-
-# Copy workspace & crate definitions for dependency layer caching
-COPY Cargo.toml ./
-COPY backend/Cargo.toml ./backend/
-
-# Create a dummy main to cache compiled external dependencies
-RUN mkdir -p backend/src && echo "fn main() {}" > backend/src/main.rs
-WORKDIR /app/backend
-RUN cargo build --release || true
-RUN rm -rf src
-
-# Now copy full backend source code
-WORKDIR /app
-COPY backend ./backend
-
-WORKDIR /app/backend
-# Pre-compile release binary with dependencies already cached
-RUN cargo build --release
-
-# ==========================================
-# STAGE 3: Final Production Runtime Container
-# ==========================================
-FROM debian:bookworm-slim AS runtime
-
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl3 \
-    sqlite3 \
-    tzdata \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Setup persistent directory
-ENV DATA_DIR=/app/data
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-ENV FRONTEND_DIR=/app/frontend_build
-RUN mkdir -p /app/data /app/frontend_build
+ENV HOSTNAME="0.0.0.0"
+ENV DATA_DIR=/app/data
 
-# Copy compiled backend binary
-COPY --from=backend-builder /app/target/release/wishlist-manager-ph-backend /app/wishlist-manager-ph
+# Install curl for docker healthcheck & SQLite dependencies
+RUN apk add --no-cache curl
 
-# Copy compiled static frontend SPA assets
-COPY --from=frontend-builder /app/frontend/build /app/frontend_build
+# Create user and persistent data dir
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app/data
 
-# Expose Web Port
+# Copy built artifacts from builder
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
 EXPOSE 3000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/api/system/sale-calendar || exit 1
-
-# Mount persistent data directory
 VOLUME ["/app/data"]
 
-ENTRYPOINT ["/app/wishlist-manager-ph"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3000/login || exit 1
+
+CMD ["node", "server.js"]
