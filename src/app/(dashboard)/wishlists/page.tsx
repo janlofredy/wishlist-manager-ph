@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { revalidatePath } from "next/cache";
+import { SmartItemForm } from "@/components/items/smart-item-form";
 import Link from "next/link";
 import {
   Sparkles,
@@ -110,86 +111,10 @@ export default async function WishlistsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Add Item Quick Form */}
-        <Card className="lg:col-span-1 p-6 h-fit">
-          <CardHeader className="p-0 mb-4">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" /> Add Wishlist Item
-            </CardTitle>
-          </CardHeader>
-
-          <form action={addItem} className="space-y-3 text-sm">
-            <div>
-              <label className="text-xs font-bold text-muted-foreground block mb-1">
-                Item Name
-              </label>
-              <Input name="name" placeholder="e.g. Oral-B Vitality Toothbrush" required />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">
-                  Estimated Price (₱)
-                </label>
-                <Input name="price" type="number" step="10" placeholder="1000" required />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">
-                  Target Price (₱)
-                </label>
-                <Input name="targetPrice" type="number" step="10" placeholder="800" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">
-                  Priority Tier
-                </label>
-                <select
-                  name="priority"
-                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs"
-                  defaultValue="2"
-                >
-                  <option value="1">1: Quick Win (&lt; ₱1.5k)</option>
-                  <option value="2">2: Utility & Hobby</option>
-                  <option value="3">3: Mid-Cost Want</option>
-                  <option value="4">4: Large Purchase</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-muted-foreground block mb-1">
-                  Category
-                </label>
-                <Input name="category" placeholder="Electronics, Tools..." defaultValue="General" />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-muted-foreground block mb-1">
-                Shopee Philippines URL (Optional)
-              </label>
-              <Input name="shopeeUrl" placeholder="https://shopee.ph/product/..." />
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                id="isNeed"
-                name="isNeed"
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <label htmlFor="isNeed" className="text-xs font-bold text-foreground cursor-pointer">
-                🛡️ Mark as Essential Need (Not a pure want)
-              </label>
-            </div>
-
-            <Button type="submit" className="w-full font-bold rounded-xl mt-3">
-              Save To Wishlist
-            </Button>
-          </form>
-        </Card>
+        {/* Smart Item Form (Shopee/Lazada link auto-fetch + manual direct input + auto tags + default Want) */}
+        <div className="lg:col-span-1">
+          <SmartItemForm wishlistId={userWishlists[0]?.id || ""} />
+        </div>
 
         {/* Wishlist Items List */}
         <div className="lg:col-span-2 space-y-3">
