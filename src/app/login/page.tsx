@@ -73,11 +73,17 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground">
-            Strict authentication enabled. Only authorized Google accounts can access this instance.
-          </p>
+          <div className="space-y-1.5 text-center">
+            <p className="text-xs text-muted-foreground">
+              Strict authentication enabled. Only authorized Google accounts can access this instance.
+            </p>
+            <p className="text-[11px] font-mono text-muted-foreground/60">
+              v{process.env.NEXT_PUBLIC_APP_VERSION || "2.0.0"}
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+

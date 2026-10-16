@@ -158,7 +158,14 @@ export default async function WishlistsPage() {
                     </Badge>
                   </div>
 
-                  <h3 className="font-bold text-base mt-1">{item.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-base mt-1">{item.name}</h3>
+                    {item.notes && (
+                      <span className="text-[11px] font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md mt-1">
+                        {item.notes}
+                      </span>
+                    )}
+                  </div>
 
                   {item.shopeeUrl && (
                     <a

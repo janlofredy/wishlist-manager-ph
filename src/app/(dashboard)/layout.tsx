@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   ShoppingBag,
   LayoutDashboard,
@@ -8,11 +9,11 @@ import {
   Sparkles,
   Calendar,
   LogOut,
-  Moon,
-  Sun,
   ShieldCheck,
 } from "lucide-react";
 import Image from "next/image";
+
+const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "2.0.0";
 
 export default async function DashboardLayout({
   children,
@@ -26,14 +27,22 @@ export default async function DashboardLayout({
       {/* Top Navbar */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5 font-black text-lg">
-            <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-sm">
-              <ShoppingBag className="h-5 w-5" />
-            </div>
-            <span>
-              Wishlist <span className="text-primary">PH</span>
-            </span>
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link href="/" className="flex items-center gap-2.5 font-black text-lg">
+              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-sm">
+                <ShoppingBag className="h-5 w-5" />
+              </div>
+              <span>
+                Wishlist <span className="text-primary">PH</span>
+              </span>
+            </Link>
+            <Badge
+              variant="secondary"
+              className="text-[10px] font-mono font-semibold px-1.5 py-0 h-5 bg-muted text-muted-foreground border border-border/60"
+            >
+              v{appVersion}
+            </Badge>
+          </div>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-1 text-sm font-semibold text-muted-foreground">
@@ -106,9 +115,17 @@ export default async function DashboardLayout({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
         {children}
       </main>
+
+      {/* Desktop / General Footer */}
+      <footer className="border-t py-4 px-4 text-center text-xs text-muted-foreground mb-14 md:mb-0">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <span>Wishlist Manager PH</span>
+          <span className="font-mono text-[11px]">v{appVersion}</span>
+        </div>
+      </footer>
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-md p-2 z-50 flex items-center justify-around text-[10px] font-bold">
@@ -131,3 +148,4 @@ export default async function DashboardLayout({
     </div>
   );
 }
+

@@ -1,6 +1,9 @@
 export interface ProductScrapeResult {
   title?: string;
   price?: number;
+  priceRange?: string; // e.g. "₱450 - ₱1,250"
+  hasVariations?: boolean;
+  selectedModelId?: string;
   imageUrl?: string;
   source?: "shopee" | "lazada" | "generic";
   suggestedCategory?: string;
@@ -87,8 +90,17 @@ export async function scrapeProductUrl(url: string): Promise<ProductScrapeResult
 
     const html = await res.text();
 
-    // 1. Extract Price
+    // 1. Extract Price & Variation Price Range
     let price: number | undefined;
+    let priceRange: string | undefined;
+    let hasVariations = false;
+
+    // Detect price ranges like ₱350 - ₱1,200
+    const rangeMatch = html.match(/₱\s*([0-9,]+(\.[0-9]{2})?)\s*-\s*₱?\s*([0-9,]+(\.[0-9]{2})?)/i);
+    if (rangeMatch) {
+      priceRange = `₱${rangeMatch[1]} - ₱${rangeMatch[3]}`;
+      hasVariations = true;
+    }
 
     // Shopee JSON-LD or meta og:price
     const pricePatterns = [
@@ -108,6 +120,14 @@ export async function scrapeProductUrl(url: string): Promise<ProductScrapeResult
           break;
         }
       }
+    }
+
+    // Check if the URL contains specific variation parameters
+    // Shopee often includes ?modelid=... or ?sp_atk=... or i.shopId.itemId?modelId=...
+    const urlObj = new URL(url);
+    const selectedModelId = urlObj.searchParams.get("modelid") || urlObj.searchParams.get("variation") || undefined;
+    if (selectedModelId) {
+      hasVariations = true;
     }
 
     // 2. Extract Title
@@ -141,6 +161,9 @@ export async function scrapeProductUrl(url: string): Promise<ProductScrapeResult
     return {
       title,
       price,
+      priceRange,
+      hasVariations,
+      selectedModelId,
       imageUrl,
       source,
       suggestedCategory: category,

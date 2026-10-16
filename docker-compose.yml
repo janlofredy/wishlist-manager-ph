@@ -3,6 +3,8 @@ services:
     image: ghcr.io/janlofredy/wishlist-manager-ph:latest
     container_name: wishlist-manager-ph
     restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     ports:
       - "3000:3000"
     environment:
@@ -15,3 +17,12 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL:-https://wishlist.janlofre.com}
     volumes:
       - ./data:/app/data
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: wishlist-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup --label-enable
+

@@ -29,6 +29,8 @@ export async function POST(req: Request) {
     wishlistId = defaultList?.id || "";
   }
 
+  const variation = (formData.get("variation") as string) || null;
+
   await db.insert(items).values({
     wishlistId,
     userId,
@@ -40,6 +42,7 @@ export async function POST(req: Request) {
     currentPrice: estimatedPrice,
     targetPrice,
     shopeeUrl,
+    notes: variation ? `Option: ${variation}` : null,
     status: "Waiting",
   });
 

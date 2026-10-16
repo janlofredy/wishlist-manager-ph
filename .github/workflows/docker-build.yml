@@ -16,12 +16,32 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from package.json
+        id: pkg
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag if not exists
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          TAG="${{ steps.pkg.outputs.tag }}"
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
 
       - name: Set up QEMU (Multi-platform emulation)
         uses: docker/setup-qemu-action@v3
@@ -44,6 +64,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=v${{ steps.pkg.outputs.version }}
+            type=raw,value=${{ steps.pkg.outputs.version }}
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=sha,prefix=sha-
@@ -56,5 +78,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.pkg.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+

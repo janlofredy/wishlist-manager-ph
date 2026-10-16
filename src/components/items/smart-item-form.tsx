@@ -21,6 +21,8 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
   const [category, setCategory] = useState("General");
   const [priority, setPriority] = useState(2);
   const [isNeed, setIsNeed] = useState(false); // Default: Want (false)
+  const [selectedVariation, setSelectedVariation] = useState("");
+  const [priceRange, setPriceRange] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -48,6 +50,9 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
       if (data.price) {
         setPrice(data.price.toString());
       }
+      if (data.priceRange) {
+        setPriceRange(data.priceRange);
+      }
       if (data.suggestedCategory) {
         setCategory(data.suggestedCategory);
       }
@@ -57,6 +62,8 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
 
       if (data.error) {
         setStatusMessage(data.error);
+      } else if (data.priceRange) {
+        setStatusMessage(`⚡ Variations detected (${data.priceRange}). Base price loaded, adjust if choosing a higher tier.`);
       } else {
         setStatusMessage("✅ Auto-filled price, tags, and category!");
       }
@@ -141,7 +148,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
           <div className="flex-grow border-t border-muted"></div>
         </div>
 
-        {/* 2. Direct Product Name */}
+        {/* 2. Direct Product Name & Variation */}
         <div>
           <label className="text-xs font-bold text-muted-foreground block mb-1">
             Product Name
@@ -152,6 +159,23 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
             required
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-muted-foreground flex items-center justify-between mb-1">
+            <span>Selected Variation / Option (Optional)</span>
+            {priceRange && (
+              <span className="text-[10px] text-orange-500 font-bold">
+                Range: {priceRange}
+              </span>
+            )}
+          </label>
+          <Input
+            name="variation"
+            placeholder="e.g. Black / 256GB / Size L"
+            value={selectedVariation}
+            onChange={(e) => setSelectedVariation(e.target.value)}
           />
         </div>
 
