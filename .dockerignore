@@ -1,0 +1,26 @@
+# Git & CI
+.git
+.gitignore
+.github
+
+# Dependencies & Build outputs
+node_modules
+.next
+out
+build
+*.tsbuildinfo
+
+# Local environment & runtime data
+.env
+.env.*
+!.env.example
+data
+pgdata
+
+# Docs & OS metadata
+README.md
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

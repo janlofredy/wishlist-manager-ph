@@ -151,14 +151,14 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
         {/* 2. Direct Product Name & Variation */}
         <div>
           <label className="text-xs font-bold text-muted-foreground block mb-1">
-            Product Name
+            Product Name {productUrl ? "(Auto-detected or custom)" : "(Required if no link)"}
           </label>
           <Input
             name="name"
-            placeholder="e.g. Simplus Coffee Grinder"
+            placeholder={productUrl ? "Will use listing title if left blank" : "e.g. Simplus Coffee Grinder"}
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
-            required
+            required={!productUrl}
           />
         </div>
 
@@ -183,16 +183,15 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-bold text-muted-foreground block mb-1">
-              Price (PHP ₱)
+              Price (PHP ₱) {productUrl && !price ? "(Auto-fetching...)" : ""}
             </label>
             <Input
               name="price"
               type="number"
               step="10"
-              placeholder="e.g. 1200"
+              placeholder={productUrl ? "Auto-fetches from link" : "e.g. 1200"}
               value={price}
               onChange={(e) => handlePriceChange(e.target.value)}
-              required
             />
           </div>
           <div>
