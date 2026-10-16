@@ -14,12 +14,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   callbacks: {
     ...authConfig.callbacks,
-    session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-      }
-      return session;
-    },
   },
   trustHost: true,
 });
