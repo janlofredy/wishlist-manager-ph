@@ -58,6 +58,96 @@ export function inferCategoryAndPriority(productName: string, price: number = 0)
   return { category, priority };
 }
 
+export interface ParsedListingInput {
+  url?: string;
+  title?: string;
+  price?: number;
+  category: string;
+  priority: number;
+  extractedFromText: boolean;
+}
+
+// Client-safe parser that handles URLs, mobile share snippets, and pricing without bot blocks
+export function parseListingInput(rawInput: string): ParsedListingInput {
+  const text = rawInput.trim();
+  let url: string | undefined;
+  let title: string | undefined;
+  let price: number | undefined;
+
+  // 1. Extract URL if present
+  const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch) {
+    url = urlMatch[0];
+  }
+
+  // 2. Extract Price (₱1,200, P1200, PHP 1,200, or standalone price)
+  const pricePatterns = [
+    /(?:₱|PHP|P)\s*([0-9,]+(?:\.[0-9]{1,2})?)/i,
+    /at\s+([0-9,]+(?:\.[0-9]{1,2})?)\s+(?:now|php|pesos)?/i,
+    /price:\s*([0-9,]+(?:\.[0-9]{1,2})?)/i,
+  ];
+
+  for (const pat of pricePatterns) {
+    const match = text.match(pat);
+    if (match && match[1]) {
+      const parsed = parseFloat(match[1].replace(/,/g, ""));
+      if (!isNaN(parsed) && parsed > 0) {
+        price = parsed;
+        break;
+      }
+    }
+  }
+
+  // 3. Extract Title
+  // Check if it's a mobile share text (e.g. "Check out ... on Shopee at ₱1,299 now! https://...")
+  let cleanedText = text;
+  if (url) {
+    cleanedText = cleanedText.replace(url, "");
+  }
+
+  // Strip common platform share prefixes / suffixes
+  cleanedText = cleanedText
+    .replace(/^check out\s+/i, "")
+    .replace(/^i found\s+/i, "")
+    .replace(/^look at\s+/i, "")
+    .replace(/on shopee.*$/i, "")
+    .replace(/on lazada.*$/i, "")
+    .replace(/at\s+₱.*$/i, "")
+    .replace(/at\s+p.*$/i, "")
+    .replace(/₱.*$/i, "")
+    .trim();
+
+  if (cleanedText.length >= 3) {
+    title = cleanedText;
+  } else if (url) {
+    // Fallback: extract title from decoded URL slug
+    try {
+      const urlObj = new URL(url);
+      const segments = urlObj.pathname.split("/").filter(Boolean);
+      let rawSlug = segments[segments.length - 1] || "";
+      rawSlug = rawSlug.replace(/-i\.\d+\.\d+.*$/, "").replace(/\?.*$/, "");
+      try {
+        rawSlug = decodeURIComponent(rawSlug);
+      } catch {}
+      rawSlug = rawSlug.replace(/-/g, " ").replace(/_/g, " ").trim();
+      if (rawSlug.length >= 3) {
+        title = rawSlug;
+      }
+    } catch {}
+  }
+
+  const { category, priority } = inferCategoryAndPriority(title || text, price || 0);
+
+  return {
+    url,
+    title,
+    price,
+    category,
+    priority,
+    extractedFromText: Boolean(url || price || (title && title !== text)),
+  };
+}
+
 // Scrape Shopee PH or Lazada PH listing URL
 export async function scrapeProductUrl(url: string): Promise<ProductScrapeResult> {
   const isShopee = url.includes("shopee.ph");

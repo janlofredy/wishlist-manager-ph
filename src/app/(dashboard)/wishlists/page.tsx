@@ -1,11 +1,13 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { items, wishlists } from "@/db/schema";
+import { items, wishlists, financialProfiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { Card } from "@/components/ui/card";
 import { revalidatePath } from "next/cache";
 import { SmartItemForm } from "@/components/items/smart-item-form";
 import { CompactItemCard } from "@/components/items/compact-item-card";
+import { SidebarBudgetCard } from "@/components/items/sidebar-budget-card";
+import { calculateSmartBudgetSuggestion } from "@/lib/smart-budget";
 import { Sparkles } from "lucide-react";
 
 export default async function WishlistsPage() {
@@ -38,6 +40,27 @@ export default async function WishlistsPage() {
   // Items shown in the main list: standalone items or primary items (parentItemId is null)
   const primaryItems = allUserItems.filter((i) => !i.parentItemId);
 
+  // Financial profile & budget calculations
+  const profile = await db.query.financialProfiles.findFirst({
+    where: eq(financialProfiles.userId, userId),
+  });
+
+  const analysis = calculateSmartBudgetSuggestion({
+    avgMonthlyIncome: profile?.avgMonthlyIncome || 0,
+    monthlyBills: profile?.monthlyBills || 0,
+    savingsRatePercent: profile?.savingsRatePercent || 20,
+    items: allUserItems,
+  });
+
+  const activeMonthlyBudget =
+    profile?.customWishlistBudget && profile.customWishlistBudget > 0
+      ? profile.customWishlistBudget
+      : analysis.suggestedWishlistBudget;
+
+  const totalActiveWishlistValue = primaryItems
+    .filter((i) => i.status !== "Purchased")
+    .reduce((sum, i) => sum + i.currentPrice, 0);
+
   async function markPurchased(itemId: string) {
     "use server";
     await db
@@ -67,14 +90,19 @@ export default async function WishlistsPage() {
             <Sparkles className="h-7 w-7 text-purple-500" /> Wishlist & Item Manager
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Categorize items by Priority 1–4, tag as 🛡️ Essential Need or ✨ Want, and track prices with smart targets.
+            Categorize items by Priority 1–4, tag as ⚡ Essential Want or ✨ Want, and track prices with smart targets.
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Smart Item Form (Shopee/Lazada link auto-fetch + manual direct input + auto tags + default Want) */}
-        <div className="lg:col-span-1">
+        {/* Left Sidebar: Available Budget Card + Smart Item Form */}
+        <div className="lg:col-span-1 space-y-4">
+          <SidebarBudgetCard
+            currentMonthlyBudget={activeMonthlyBudget}
+            isManual={Boolean(profile?.customWishlistBudget && profile.customWishlistBudget > 0)}
+            totalActiveWishlistValue={totalActiveWishlistValue}
+          />
           <SmartItemForm wishlistId={userWishlists[0]?.id || ""} />
         </div>
 

@@ -10,8 +10,10 @@ import {
   ArrowRightLeft,
   Loader2,
   Undo2,
+  Edit3,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ItemDetailModal } from "@/components/items/item-detail-modal";
 
 interface ItemAlternativesSectionProps {
   primaryItem: any;
@@ -29,6 +31,7 @@ export function ItemAlternativesSection({
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<any | null>(null);
 
   const handleLinkAlternative = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,29 +113,44 @@ export function ItemAlternativesSection({
           <div className="p-3 rounded-xl border bg-primary/5 border-primary/20 flex flex-col justify-between min-w-0">
             <div>
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <Badge variant="outline" className="text-[10px] bg-background shrink-0">
+                <Badge variant="outline" className="text-[10px] bg-background shrink-0 font-bold">
                   Option A (Primary)
                 </Badge>
                 <span className="font-black text-sm text-primary shrink-0">
                   {formatPHP(primaryItem.currentPrice)}
                 </span>
               </div>
-              <div className="font-bold text-xs text-foreground line-clamp-2 break-words" title={primaryItem.name}>
+              <button
+                type="button"
+                onClick={() => setEditingItem(primaryItem)}
+                className="font-bold text-xs text-foreground hover:text-primary transition-colors text-left line-clamp-2 break-words cursor-pointer block w-full"
+                title="Click to view & edit Option A details"
+              >
                 {primaryItem.name}
-              </div>
+              </button>
             </div>
-            {primaryItem.shopeeUrl && (
-              <div className="pt-2 mt-1 border-t border-border/40">
+            <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/40 text-[10px]">
+              {primaryItem.shopeeUrl ? (
                 <a
                   href={primaryItem.shopeeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] text-orange-500 hover:underline inline-flex items-center gap-1 font-medium"
+                  className="text-orange-500 hover:underline inline-flex items-center gap-1 font-medium"
                 >
                   Listing Link <ExternalLink className="h-2.5 w-2.5" />
                 </a>
-              </div>
-            )}
+              ) : (
+                <span />
+              )}
+              <button
+                type="button"
+                onClick={() => setEditingItem(primaryItem)}
+                className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 font-semibold transition-colors shrink-0 ml-auto"
+                title="Edit Option A"
+              >
+                <Edit3 className="h-3 w-3" /> Edit
+              </button>
+            </div>
           </div>
 
           {/* Attached Alternatives Picked From Wishlist */}
@@ -144,7 +162,7 @@ export function ItemAlternativesSection({
               <div>
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Badge variant="want" className="text-[10px] shrink-0">
+                    <Badge variant="want" className="text-[10px] shrink-0 font-bold">
                       Option {String.fromCharCode(66 + idx)}
                     </Badge>
                     <span className="text-[10px] text-muted-foreground truncate">
@@ -155,24 +173,38 @@ export function ItemAlternativesSection({
                     {formatPHP(alt.currentPrice)}
                   </span>
                 </div>
-                <div className="font-bold text-xs text-foreground line-clamp-2 break-words" title={alt.name}>
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(alt)}
+                  className="font-bold text-xs text-foreground hover:text-primary transition-colors text-left line-clamp-2 break-words cursor-pointer block w-full"
+                  title="Click to view & edit alternative details"
+                >
                   {alt.name}
-                </div>
+                </button>
               </div>
 
-              <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/40 text-[10px]">
-                {alt.shopeeUrl ? (
-                  <a
-                    href={alt.shopeeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-orange-500 hover:underline inline-flex items-center gap-1 font-medium truncate max-w-[120px]"
+              <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/40 text-[10px] gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {alt.shopeeUrl && (
+                    <a
+                      href={alt.shopeeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-orange-500 hover:underline inline-flex items-center gap-1 font-medium truncate max-w-[100px]"
+                    >
+                      Listing <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem(alt)}
+                    className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 font-semibold transition-colors shrink-0"
+                    title="Edit alternative"
                   >
-                    Listing Link <ExternalLink className="h-2.5 w-2.5 shrink-0" />
-                  </a>
-                ) : (
-                  <span />
-                )}
+                    <Edit3 className="h-3 w-3" /> Edit
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => handleDetachAlternative(alt.id)}
@@ -240,6 +272,15 @@ export function ItemAlternativesSection({
 
           {error && <div className="text-[11px] text-destructive">{error}</div>}
         </form>
+      )}
+
+      {/* Edit Modal for Alternative / Primary Item */}
+      {editingItem && (
+        <ItemDetailModal
+          item={editingItem}
+          isOpen={Boolean(editingItem)}
+          onClose={() => setEditingItem(null)}
+        />
       )}
     </div>
   );

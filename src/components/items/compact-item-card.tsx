@@ -57,13 +57,13 @@ export function CompactItemCard({
       >
         {/* Left: Badge + Title + Category */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {/* Need/Want pill with emoji icons only */}
+          {/* Essential Want vs Want emoji pill */}
           <Badge
             variant={item.isNeed ? "need" : "want"}
             className="text-xs px-1.5 py-0.5 h-6 shrink-0 font-bold inline-flex items-center justify-center cursor-default select-none"
-            title={item.isNeed ? "Essential Need" : "Want"}
+            title={item.isNeed ? "⚡ Essential Want (Almost a need)" : "✨ Want"}
           >
-            {item.isNeed ? "🛡️" : "✨"}
+            {item.isNeed ? "⚡" : "✨"}
           </Badge>
 
           {/* Clickable Title to open details modal */}

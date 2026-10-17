@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatPHP } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,10 @@ import {
   Calendar,
   Save,
   Loader2,
-  Trash2,
-  CheckCircle,
-  Tag,
-  ArrowUpDown,
+  Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { inferCategoryAndPriority, parseListingInput } from "@/lib/product-scraper";
 
 interface ItemDetailModalProps {
   item: any;
@@ -42,9 +40,10 @@ export function ItemDetailModal({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [parsingUrl, setParsingUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form states
+  // Form states initialized with item values
   const [name, setName] = useState(item.name || "");
   const [category, setCategory] = useState(item.category || "General");
   const [priority, setPriority] = useState(item.priority?.toString() || "2");
@@ -54,6 +53,65 @@ export function ItemDetailModal({
   const [notes, setNotes] = useState(item.notes || "");
   const [shopeeUrl, setShopeeUrl] = useState(item.shopeeUrl || "");
   const [status, setStatus] = useState(item.status || "Waiting");
+
+  // Keep state synced when a different item is opened
+  useEffect(() => {
+    if (item) {
+      setName(item.name || "");
+      setCategory(item.category || "General");
+      setPriority(item.priority?.toString() || "2");
+      setIsNeed(Boolean(item.isNeed));
+      setCurrentPrice(item.currentPrice?.toString() || "0");
+      setTargetPrice(item.targetPrice ? item.targetPrice.toString() : "");
+      setNotes(item.notes || "");
+      setShopeeUrl(item.shopeeUrl || "");
+      setStatus(item.status || "Waiting");
+      setIsEditing(false);
+      setError(null);
+    }
+  }, [item, isOpen]);
+
+  // Real-time re-identification when price changes
+  const handlePriceChange = (val: string) => {
+    setCurrentPrice(val);
+    const parsedPrice = parseFloat(val) || 0;
+    const inferred = inferCategoryAndPriority(name, parsedPrice);
+    setPriority(inferred.priority.toString());
+  };
+
+  // Real-time re-identification when name changes
+  const handleNameChange = (val: string) => {
+    setName(val);
+    if (val.trim().length > 2) {
+      const parsedPrice = parseFloat(currentPrice) || 0;
+      const inferred = inferCategoryAndPriority(val, parsedPrice);
+      setCategory(inferred.category);
+      setPriority(inferred.priority.toString());
+    }
+  };
+
+  // Auto-evaluate link or pasted mobile share text
+  const handleUrlBlur = async () => {
+    if (!shopeeUrl.trim()) return;
+
+    setParsingUrl(true);
+    try {
+      const parsed = parseListingInput(shopeeUrl);
+      if (parsed.url) {
+        setShopeeUrl(parsed.url);
+      }
+      if (parsed.title) {
+        setName(parsed.title);
+      }
+      if (parsed.price) {
+        setCurrentPrice(parsed.price.toString());
+      }
+      setCategory(parsed.category);
+      setPriority(parsed.priority.toString());
+    } finally {
+      setParsingUrl(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +142,7 @@ export function ItemDetailModal({
       setIsEditing(false);
       router.refresh();
       if (onItemUpdated) onItemUpdated();
+      onClose();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -94,13 +153,13 @@ export function ItemDetailModal({
   const getPriorityLabel = (p: number) => {
     switch (p) {
       case 1:
-        return "P1 • Quick Win (<₱5k)";
+        return "Quick Win (<₱1.5k)";
       case 2:
-        return "P2 • Hobby & Utility (₱5k-₱20k)";
+        return "Hobby & Utility (₱1.5k-₱5k)";
       case 3:
-        return "P3 • Mid-Cost (₱20k-₱50k)";
+        return "Mid-Cost (₱5k-₱15k)";
       case 4:
-        return "P4 • Large (>₱50k)";
+        return "Large Purchase (>₱15k)";
       default:
         return `P${p}`;
     }
@@ -127,8 +186,8 @@ export function ItemDetailModal({
           </div>
           <DialogDescription className="text-xs">
             {isEditing
-              ? "Modify the specifications, category, budget priority, or links."
-              : "Complete information, pricing targets, and tracking status."}
+              ? "Modify specifications, category, budget priority, or links. Priority auto-recalculates."
+              : "Complete specifications, budget priority, and tracking status."}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,28 +200,35 @@ export function ItemDetailModal({
         {isEditing ? (
           <form onSubmit={handleSave} className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-semibold block mb-1">Item Name</label>
+              <label className="text-xs font-semibold block mb-1">
+                Item Name / Title
+              </label>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="Product name"
                 required
-                className="text-sm rounded-xl"
+                className="text-sm rounded-xl font-medium"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold block mb-1">Current Price (₱)</label>
+                <label className="text-xs font-semibold block mb-1">
+                  Current Price (₱)
+                </label>
                 <Input
                   type="number"
                   step="0.01"
                   value={currentPrice}
-                  onChange={(e) => setCurrentPrice(e.target.value)}
+                  onChange={(e) => handlePriceChange(e.target.value)}
                   placeholder="0.00"
                   required
-                  className="text-sm rounded-xl"
+                  className="text-sm rounded-xl font-bold text-primary"
                 />
+                <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                  Re-identifies priority tier automatically.
+                </span>
               </div>
               <div>
                 <label className="text-xs font-semibold block mb-1">
@@ -174,8 +240,11 @@ export function ItemDetailModal({
                   value={targetPrice}
                   onChange={(e) => setTargetPrice(e.target.value)}
                   placeholder="Optional target sale price"
-                  className="text-sm rounded-xl"
+                  className="text-sm rounded-xl font-medium"
                 />
+                <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                  Triggers alert when sale price is reached.
+                </span>
               </div>
             </div>
 
@@ -185,7 +254,7 @@ export function ItemDetailModal({
                 <Input
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Electronics, Home, etc."
+                  placeholder="Electronics, Home, Tools..."
                   className="text-sm rounded-xl"
                 />
               </div>
@@ -194,12 +263,12 @@ export function ItemDetailModal({
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full h-10 px-3 py-2 text-sm rounded-xl border bg-background border-input"
+                  className="w-full h-10 px-3 py-2 text-sm rounded-xl border bg-background border-input font-medium"
                 >
-                  <option value="1">P1 - Quick Win (&lt;₱5k)</option>
-                  <option value="2">P2 - Hobby &amp; Utility (₱5k-₱20k)</option>
-                  <option value="3">P3 - Mid-Cost (₱20k-₱50k)</option>
-                  <option value="4">P4 - Large Purchase (&gt;₱50k)</option>
+                  <option value="1">P1 - Quick Win (&lt;₱1.5k)</option>
+                  <option value="2">P2 - Hobby &amp; Utility (₱1.5k-₱5k)</option>
+                  <option value="3">P3 - Mid-Cost (₱5k-₱15k)</option>
+                  <option value="4">P4 - Large Purchase (&gt;₱15k)</option>
                 </select>
               </div>
             </div>
@@ -219,6 +288,8 @@ export function ItemDetailModal({
                   <option value="Archived">Archived</option>
                 </select>
               </div>
+
+              {/* Rebranded ⚡ Essential Want Checkbox */}
               <div className="flex items-center gap-2 pt-6">
                 <input
                   type="checkbox"
@@ -228,20 +299,33 @@ export function ItemDetailModal({
                   className="rounded border-gray-300 text-primary h-4 w-4"
                 />
                 <label htmlFor="modal-is-need" className="text-xs font-semibold cursor-pointer">
-                  Mark as 🛡️ Essential Need
+                  Mark as ⚡ Essential Want
                 </label>
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold block mb-1">Shopee / Lazada URL</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold">
+                  Shopee / Lazada Link or Share Text
+                </label>
+                {parsingUrl && (
+                  <span className="text-[10px] text-primary flex items-center gap-1 font-medium">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Auto-evaluating link...
+                  </span>
+                )}
+              </div>
               <Input
-                type="url"
+                type="text"
                 value={shopeeUrl}
                 onChange={(e) => setShopeeUrl(e.target.value)}
-                placeholder="https://shopee.ph/product/..."
+                onBlur={handleUrlBlur}
+                placeholder="Paste Shopee/Lazada link or copied share text..."
                 className="text-sm rounded-xl"
               />
+              <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                Auto-evaluates product title, slug, and category on paste/blur.
+              </span>
             </div>
 
             <div>
@@ -264,7 +348,7 @@ export function ItemDetailModal({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading} className="gap-1.5 rounded-xl">
+              <Button type="submit" disabled={loading} className="gap-1.5 rounded-xl font-bold">
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Save className="h-4 w-4" /> Save Changes
               </Button>
@@ -274,8 +358,8 @@ export function ItemDetailModal({
           <div className="space-y-4 py-2">
             <div>
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <Badge variant={item.isNeed ? "need" : "want"}>
-                  {item.isNeed ? "🛡️ Essential Need" : "✨ Want"}
+                <Badge variant={item.isNeed ? "need" : "want"} className="gap-1 font-bold">
+                  {item.isNeed ? "⚡ Essential Want" : "✨ Want"}
                 </Badge>
                 <Badge variant="outline" className="text-xs font-medium">
                   {getPriorityLabel(item.priority)}
@@ -286,8 +370,8 @@ export function ItemDetailModal({
                 <Badge
                   className={
                     item.status === "Purchased"
-                      ? "bg-emerald-500 text-white"
-                      : "bg-muted text-muted-foreground"
+                      ? "bg-emerald-500 text-white font-bold"
+                      : "bg-muted text-muted-foreground font-medium"
                   }
                 >
                   {item.status}

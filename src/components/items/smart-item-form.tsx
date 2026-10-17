@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { inferCategoryAndPriority } from "@/lib/product-scraper";
-import { Sparkles, Link2, Loader2, Plus, ShieldCheck, Tag } from "lucide-react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { inferCategoryAndPriority, parseListingInput } from "@/lib/product-scraper";
+import { Sparkles, Link2, Loader2, Plus, Zap } from "lucide-react";
 
 interface SmartItemFormProps {
   wishlistId: string;
@@ -20,20 +20,50 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
   const [targetPrice, setTargetPrice] = useState("");
   const [category, setCategory] = useState("General");
   const [priority, setPriority] = useState(2);
-  const [isNeed, setIsNeed] = useState(false); // Default: Want (false)
+  const [isNeed, setIsNeed] = useState(false); // Default: Want (false), Checked: Essential Want (true)
   const [selectedVariation, setSelectedVariation] = useState("");
   const [priceRange, setPriceRange] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Auto-fetch price & title when URL is pasted
+  // Smart parser: runs instantly when user pastes a link or copied mobile share text
+  function handleUrlChange(rawInput: string) {
+    setProductUrl(rawInput);
+
+    if (rawInput.trim().length > 5) {
+      const parsed = parseListingInput(rawInput);
+      if (parsed.extractedFromText) {
+        if (parsed.url) {
+          setProductUrl(parsed.url);
+        }
+        if (parsed.title) {
+          setName(parsed.title);
+        }
+        if (parsed.price) {
+          setPrice(parsed.price.toString());
+        }
+        setCategory(parsed.category);
+        setPriority(parsed.priority);
+
+        if (parsed.price) {
+          setStatusMessage("⚡ Auto-extracted title & price from share text!");
+        } else {
+          setStatusMessage("✅ Title loaded from link slug! Enter price below.");
+        }
+      }
+    }
+  }
+
+  // Fallback server scraper when user blurs URL input
   async function handleUrlBlur() {
     if (!productUrl || (!productUrl.includes("shopee.ph") && !productUrl.includes("lazada"))) {
       return;
     }
 
+    // If price is already populated from share text, don't spam the scraper
+    if (price && parseFloat(price) > 0) return;
+
     setLoading(true);
-    setStatusMessage("Extracting listing details...");
 
     try {
       const res = await fetch("/api/scrape-product", {
@@ -60,15 +90,13 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
         setPriority(data.suggestedPriority);
       }
 
-      if (data.error) {
-        setStatusMessage(data.error);
-      } else if (data.priceRange) {
-        setStatusMessage(`⚡ Variations detected (${data.priceRange}). Base price loaded, adjust if choosing a higher tier.`);
-      } else {
-        setStatusMessage("✅ Auto-filled price, tags, and category!");
+      if (data.priceRange) {
+        setStatusMessage(`⚡ Variations detected (${data.priceRange}). Adjust price if picking a specific tier.`);
+      } else if (data.price) {
+        setStatusMessage("✅ Auto-filled price from listing!");
       }
-    } catch (err: any) {
-      setStatusMessage("Could not auto-fetch. You can enter details manually below.");
+    } catch {
+      // Keep client-extracted slug and let user enter price
     } finally {
       setLoading(false);
     }
@@ -85,7 +113,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
     }
   }
 
-  // When user changes price, recalculate priority tier
+  // When user changes price, recalculate priority tier in real time
   function handlePriceChange(newPrice: string) {
     setPrice(newPrice);
     const num = parseFloat(newPrice) || 0;
@@ -140,29 +168,29 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
   }
 
   return (
-    <Card className="p-6 h-fit border-2 border-primary/20 shadow-md">
+    <Card className="p-5 h-fit border-2 border-primary/20 shadow-md">
       <CardHeader className="p-0 mb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-500" /> Smart Item Form
+            <Sparkles className="h-5 w-5 text-purple-500" /> Add to Wishlist
           </CardTitle>
           <Badge variant={isNeed ? "need" : "want"} className="font-bold">
-            {isNeed ? "🛡️ Need" : "✨ Default: Want"}
+            {isNeed ? "⚡ Essential Want" : "✨ Want"}
           </Badge>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          Paste a Shopee/Lazada link for auto-pricing, or type name & price directly.
+          Paste a Shopee/Lazada link or copied share message, or enter details manually.
         </p>
       </CardHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+      <form onSubmit={handleSubmit} className="space-y-3.5 text-sm">
         <input type="hidden" name="wishlistId" value={wishlistId} />
 
-        {/* 1. Shopee / Lazada URL Input */}
+        {/* 1. Shopee / Lazada URL or Copied Share Text Input */}
         <div>
           <label className="text-xs font-bold text-muted-foreground flex items-center justify-between mb-1">
             <span className="flex items-center gap-1.5">
-              <Link2 className="h-3.5 w-3.5 text-primary" /> Shopee or Lazada Link (Auto-Fetcher)
+              <Link2 className="h-3.5 w-3.5 text-primary" /> Listing Link or Mobile Share Text
             </span>
             {loading && (
               <span className="text-[10px] text-primary flex items-center gap-1">
@@ -172,19 +200,20 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
           </label>
           <Input
             name="shopeeUrl"
-            placeholder="https://shopee.ph/product/... or Lazada link"
+            placeholder="Paste link or share snippet (e.g. Check out ... ₱1,200)"
             value={productUrl}
-            onChange={(e) => setProductUrl(e.target.value)}
+            onChange={(e) => handleUrlChange(e.target.value)}
             onBlur={handleUrlBlur}
+            className="rounded-xl text-xs"
           />
           {statusMessage && (
-            <span className="text-[11px] font-medium text-muted-foreground mt-1 block">
+            <span className="text-[11px] font-semibold text-primary mt-1 block">
               {statusMessage}
             </span>
           )}
         </div>
 
-        <div className="relative flex py-1 items-center">
+        <div className="relative flex py-0.5 items-center">
           <div className="flex-grow border-t border-muted"></div>
           <span className="flex-shrink mx-2 text-[10px] uppercase font-bold text-muted-foreground">
             or manual item details
@@ -195,7 +224,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
         {/* 2. Direct Product Name & Variation */}
         <div>
           <label className="text-xs font-bold text-muted-foreground block mb-1">
-            Product Name {productUrl ? "(Auto-detected or custom)" : "(Required if no link)"}
+            Product Name {productUrl ? "(Auto-detected or custom)" : "(Required)"}
           </label>
           <Input
             name="name"
@@ -203,6 +232,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
             required={!productUrl}
+            className="rounded-xl"
           />
         </div>
 
@@ -220,6 +250,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
             placeholder="e.g. Black / 256GB / Size L"
             value={selectedVariation}
             onChange={(e) => setSelectedVariation(e.target.value)}
+            className="rounded-xl"
           />
         </div>
 
@@ -227,15 +258,16 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-bold text-muted-foreground block mb-1">
-              Price (PHP ₱) {productUrl && !price ? "(Auto-fetching...)" : ""}
+              Price (PHP ₱)
             </label>
             <Input
               name="price"
               type="number"
               step="10"
-              placeholder={productUrl ? "Auto-fetches from link" : "e.g. 1200"}
+              placeholder="e.g. 1200"
               value={price}
               onChange={(e) => handlePriceChange(e.target.value)}
+              className="rounded-xl font-bold"
             />
           </div>
           <div>
@@ -249,6 +281,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
               placeholder="Optional target"
               value={targetPrice}
               onChange={(e) => setTargetPrice(e.target.value)}
+              className="rounded-xl"
             />
           </div>
         </div>
@@ -264,6 +297,7 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               placeholder="Auto-detected tag"
+              className="rounded-xl"
             />
           </div>
 
@@ -273,19 +307,19 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
             </label>
             <select
               name="priority"
-              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-xs"
+              className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-medium"
               value={priority}
               onChange={(e) => setPriority(parseInt(e.target.value))}
             >
-              <option value="1">1: Quick Win (&lt; ₱1.5k)</option>
-              <option value="2">2: Utility & Hobby</option>
-              <option value="3">3: Mid-Cost Want</option>
-              <option value="4">4: Large Purchase</option>
+              <option value="1">P1 - Quick Win (&lt;₱1.5k)</option>
+              <option value="2">P2 - Hobby &amp; Utility (₱1.5k-₱5k)</option>
+              <option value="3">P3 - Mid-Cost (₱5k-₱15k)</option>
+              <option value="4">P4 - Large Purchase (&gt;₱15k)</option>
             </select>
           </div>
         </div>
 
-        {/* 5. Need vs Want Checkbox (Default: Want) */}
+        {/* 5. ⚡ Essential Want Checkbox (Default: ✨ Want) */}
         <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/40 border">
           <input
             type="checkbox"
@@ -293,17 +327,21 @@ export function SmartItemForm({ wishlistId }: SmartItemFormProps) {
             name="isNeed"
             checked={isNeed}
             onChange={(e) => setIsNeed(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
           />
           <label
             htmlFor="isNeedCheck"
             className="text-xs font-bold text-foreground cursor-pointer select-none"
           >
-            🛡️ Mark as Essential Need (Unchecked = ✨ Want)
+            Mark as ⚡ Essential Want (Almost a need)
           </label>
         </div>
 
-        <Button type="submit" className="w-full font-bold rounded-xl gap-2 shadow-md" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          className="w-full font-bold rounded-xl gap-2 shadow-md"
+          disabled={isSubmitting}
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" /> Saving...
